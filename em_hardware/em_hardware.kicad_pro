@@ -637,7 +637,7 @@
         "uuid": "fb768f1d-73c8-4399-bead-ce4ad5cbc2a0"
       }
     ],
-    "used_designators": "U1-5,R1-12,J1,D1,#PWR1-18,C1-8,TP1-3,F1,SW1-2",
+    "used_designators": "U2,U4,U6-7,D2-4,#PWR18-19,C8-9,R13-16,TP2-8",
     "variants": []
   },
   "sheets": [
