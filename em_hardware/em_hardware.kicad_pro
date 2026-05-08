@@ -519,10 +519,14 @@
   },
   "pcbnew": {
     "last_paths": {
+      "gencad": "",
       "idf": "",
       "netlist": "",
       "plot": "",
+      "pos_files": "",
       "specctra_dsn": "",
+      "step": "",
+      "svg": "",
       "vrml": ""
     },
     "page_layout_descr_file": ""
@@ -668,7 +672,7 @@
         "uuid": "fb768f1d-73c8-4399-bead-ce4ad5cbc2a0"
       }
     ],
-    "used_designators": "U4,U7-8,J2-5,R15-17,EN1,C10-13,#PWR19-28",
+    "used_designators": "#PWR29-30",
     "variants": []
   },
   "sheets": [
