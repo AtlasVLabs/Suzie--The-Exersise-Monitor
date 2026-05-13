@@ -6,3 +6,5 @@
 #define I2C_SCL_PIN 22
 
 esp_err_t i2c_bus_init(i2c_master_bus_handle_t *bus_handle);
+
+esp_err_t i2c_add_dev(i2c_master_dev_handle_t dev_handle);
