@@ -1,4 +1,4 @@
-set(CMAKE_CXX_COMPILER "C:/Users/User/.platformio/packages/toolchain-xtensa-esp-elf/bin/xtensa-esp32-elf-g++.exe")
+set(CMAKE_CXX_COMPILER "C:/Users/Asher/.platformio/packages/toolchain-xtensa-esp-elf/bin/xtensa-esp32-elf-g++.exe")
 set(CMAKE_CXX_COMPILER_ARG1 "")
 set(CMAKE_CXX_COMPILER_ID "GNU")
 set(CMAKE_CXX_COMPILER_VERSION "14.2.0")
@@ -24,11 +24,11 @@ set(CMAKE_CXX_SIMULATE_VERSION "")
 
 
 
-set(CMAKE_AR "C:/Users/User/.platformio/packages/toolchain-xtensa-esp-elf/bin/xtensa-esp32-elf-ar.exe")
-set(CMAKE_CXX_COMPILER_AR "C:/Users/User/.platformio/packages/toolchain-xtensa-esp-elf/bin/xtensa-esp32-elf-gcc-ar.exe")
-set(CMAKE_RANLIB "C:/Users/User/.platformio/packages/toolchain-xtensa-esp-elf/bin/xtensa-esp32-elf-ranlib.exe")
-set(CMAKE_CXX_COMPILER_RANLIB "C:/Users/User/.platformio/packages/toolchain-xtensa-esp-elf/bin/xtensa-esp32-elf-gcc-ranlib.exe")
-set(CMAKE_LINKER "C:/Users/User/.platformio/packages/toolchain-xtensa-esp-elf/bin/xtensa-esp32-elf-ld.exe")
+set(CMAKE_AR "C:/Users/Asher/.platformio/packages/toolchain-xtensa-esp-elf/bin/xtensa-esp32-elf-ar.exe")
+set(CMAKE_CXX_COMPILER_AR "C:/Users/Asher/.platformio/packages/toolchain-xtensa-esp-elf/bin/xtensa-esp32-elf-gcc-ar.exe")
+set(CMAKE_RANLIB "C:/Users/Asher/.platformio/packages/toolchain-xtensa-esp-elf/bin/xtensa-esp32-elf-ranlib.exe")
+set(CMAKE_CXX_COMPILER_RANLIB "C:/Users/Asher/.platformio/packages/toolchain-xtensa-esp-elf/bin/xtensa-esp32-elf-gcc-ranlib.exe")
+set(CMAKE_LINKER "C:/Users/Asher/.platformio/packages/toolchain-xtensa-esp-elf/bin/xtensa-esp32-elf-ld.exe")
 set(CMAKE_LINKER_LINK "")
 set(CMAKE_LINKER_LLD "")
 set(CMAKE_CXX_COMPILER_LINKER "NOTFOUND")
@@ -87,9 +87,9 @@ endif()
 
 
 
-set(CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES "C:/Users/User/.platformio/packages/toolchain-xtensa-esp-elf/xtensa-esp-elf/include/c++/14.2.0;C:/Users/User/.platformio/packages/toolchain-xtensa-esp-elf/xtensa-esp-elf/include/c++/14.2.0/xtensa-esp-elf/esp32;C:/Users/User/.platformio/packages/toolchain-xtensa-esp-elf/xtensa-esp-elf/include/c++/14.2.0/backward;C:/Users/User/.platformio/packages/toolchain-xtensa-esp-elf/lib/gcc/xtensa-esp-elf/14.2.0/include;C:/Users/User/.platformio/packages/toolchain-xtensa-esp-elf/lib/gcc/xtensa-esp-elf/14.2.0/include-fixed;C:/Users/User/.platformio/packages/toolchain-xtensa-esp-elf/xtensa-esp-elf/include")
+set(CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES "C:/Users/Asher/.platformio/packages/toolchain-xtensa-esp-elf/xtensa-esp-elf/include/c++/14.2.0;C:/Users/Asher/.platformio/packages/toolchain-xtensa-esp-elf/xtensa-esp-elf/include/c++/14.2.0/xtensa-esp-elf/esp32;C:/Users/Asher/.platformio/packages/toolchain-xtensa-esp-elf/xtensa-esp-elf/include/c++/14.2.0/backward;C:/Users/Asher/.platformio/packages/toolchain-xtensa-esp-elf/lib/gcc/xtensa-esp-elf/14.2.0/include;C:/Users/Asher/.platformio/packages/toolchain-xtensa-esp-elf/lib/gcc/xtensa-esp-elf/14.2.0/include-fixed;C:/Users/Asher/.platformio/packages/toolchain-xtensa-esp-elf/xtensa-esp-elf/include")
 set(CMAKE_CXX_IMPLICIT_LINK_LIBRARIES "stdc++;m;gcc;c;nosys;c;gcc")
-set(CMAKE_CXX_IMPLICIT_LINK_DIRECTORIES "C:/Users/User/.platformio/packages/toolchain-xtensa-esp-elf/lib/gcc/xtensa-esp-elf/14.2.0/esp32;C:/Users/User/.platformio/packages/toolchain-xtensa-esp-elf/xtensa-esp-elf/lib/esp32;C:/Users/User/.platformio/packages/toolchain-xtensa-esp-elf/lib/gcc/xtensa-esp-elf/14.2.0;C:/Users/User/.platformio/packages/toolchain-xtensa-esp-elf/lib/gcc;C:/Users/User/.platformio/packages/toolchain-xtensa-esp-elf/xtensa-esp-elf/lib")
+set(CMAKE_CXX_IMPLICIT_LINK_DIRECTORIES "C:/Users/Asher/.platformio/packages/toolchain-xtensa-esp-elf/lib/gcc/xtensa-esp-elf/14.2.0/esp32;C:/Users/Asher/.platformio/packages/toolchain-xtensa-esp-elf/xtensa-esp-elf/lib/esp32;C:/Users/Asher/.platformio/packages/toolchain-xtensa-esp-elf/lib/gcc/xtensa-esp-elf/14.2.0;C:/Users/Asher/.platformio/packages/toolchain-xtensa-esp-elf/lib/gcc;C:/Users/Asher/.platformio/packages/toolchain-xtensa-esp-elf/xtensa-esp-elf/lib")
 set(CMAKE_CXX_IMPLICIT_LINK_FRAMEWORK_DIRECTORIES "")
 set(CMAKE_CXX_COMPILER_CLANG_RESOURCE_DIR "")
 
