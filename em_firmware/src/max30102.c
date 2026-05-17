@@ -51,7 +51,32 @@ esp_err_t MAX30102_config(const max30102_config_t *config)
         "failed to reset MAX30102");
 
     // Clear the FIFO
+    ESP_RETURN_ON_ERROR(
+        MAX30102_write_reg(MAX30102_REG_FIFO_WR_PTR, 0x00),
+        TAG,
+        "failed to clear FIFO write pointer");
+
+    ESP_RETURN_ON_ERROR(
+        MAX30102_write_reg(MAX30102_REG_OVF_COUNTER, 0x00),
+        TAG,
+        "failed to clear FIFO overflow counter");
+
+    ESP_RETURN_ON_ERROR(
+        MAX30102_write_reg(MAX30102_REG_FIFO_RD_PTR, 0x00),
+        TAG,
+        "failed to clear FIFO read pointer");
+
     // Set FIFO behavior
+    uint8_t rol_en = 0x01; // rollover enabled
+    uint8_t a_full = 0x0F; // interrupt when 17 samples are in FIFO
+
+    uint8_t fifo_config = 0x00;
+
+    fifo_config |= ((config->sample_avg & 0x7) << 5) |
+                   ((rol_en & 0x1) << 4) | a_full & 0xF;
+
+    max30102_write_reg(MAX30102_REG_FIFO_CONFIG, fifo_config);
+
     // Set sample rate / pulse width / ADC range
     // Set LED current
     // Set mode

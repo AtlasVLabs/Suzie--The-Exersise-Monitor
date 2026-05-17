@@ -35,23 +35,34 @@
 #define MAX30102_REG_REV_ID 0xFE
 #define MAX30102_REG_PART_ID 0xFF
 
-#define MAX30102_CONFIG_DEFAULT() { \
-    .led_mode = 0x03,               \
-    .sample_rate = 0x03,            \
-    .pulse_width = 0x03,            \
-    .adc_range = 0x01,              \
-    .red_led_current = 0x24,        \
-    .ir_led_current = 0x24,         \
-}
+#define MAX30102_CONFIG_DEFAULT() {   \
+    .led_mode = 0x3,                  \
+                                      \
+    .sample_avg = 0x0,                \
+    .sample_rate = 0x1,               \
+    .pulse_width = 0x3,               \
+    .adc_range = MAX30102_ADC_8192NA, \
+                                      \
+    .red_led_current = 0x24,          \
+    .ir_led_current = 0x24,           \
+                                      \
+    .fifo_rollover_en = true,         \
+    .fifo_almost_full = 0x0F,         \
+                                      \
+    .int_en = true}
 
 typedef struct
 {
     uint8_t led_mode;
+    uint8_t sample_avg;
     uint8_t sample_rate;
     uint8_t pulse_width;
     uint8_t adc_range;
     uint8_t red_led_current;
     uint8_t ir_led_current;
+    uint8_t fifo_almost_full;
+    bool fifo_rollover_en;
+    bool int_en;
 } max30102_config_t;
 
 esp_err_t MAX30102_init(i2c_master_bus_handle_t bus_handle);
