@@ -101,4 +101,8 @@ esp_err_t MAX30102_write_field(
 /// @param
 /// @return esp error code
 esp_err_t MAX30102_reset(void);
-esp_err_t MAX30102_shutdown(void);
+
+/// @brief Call to toggle shutdown (low power mode)
+/// @param isShutDown 
+/// @return 
+esp_err_t MAX30102_shutdown_toggle(bool *isShutDown);

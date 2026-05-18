@@ -78,6 +78,7 @@ esp_err_t MAX30102_config(const max30102_config_t *config)
     max30102_write_reg(MAX30102_REG_FIFO_CONFIG, fifo_config);
 
     // Set sample rate / pulse width / ADC range
+
     // Set LED current
     // Set mode
     return ESP_OK;
@@ -165,7 +166,7 @@ esp_err_t MAX30102_reset(void)
         "failed to set MAX30102 reset bit");
 
     // read reset bit till it is 0 again
-    uint8_t value = 0xAE;
+    uint8_t value = 0x0;
     do
     {
         ESP_RETURN_ON_ERROR(
@@ -182,5 +183,37 @@ esp_err_t MAX30102_reset(void)
 
     } while (value);
 
+    return ESP_OK;
+}
+
+esp_err_t MAX30102_shutdown_toggle(bool *isShutDown)
+{
+    if (isShutDown == NULL)
+    {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    uint8_t value = 0x00;
+
+    // read SHDN bit
+    ESP_RETURN_ON_ERROR(
+        MAX30102_read_reg(
+            MAX30102_REG_MODE_CONFIG,
+            &value),
+        TAG,
+        "failed to read mode config reg");
+
+    // flip the SHDN bit (bit 7)
+    value ^= (1 << 7);
+
+    // put it back where u found it
+    ESP_RETURN_ON_ERROR(
+        MAX30102_write_reg(
+            MAX30102_REG_MODE_CONFIG,
+            value),
+        TAG,
+        "failed to write mode config reg");
+
+    *isShutDown = (value & (1 << 7)) != 0;
     return ESP_OK;
 }
