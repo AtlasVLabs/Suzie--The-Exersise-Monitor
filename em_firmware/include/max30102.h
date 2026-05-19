@@ -35,20 +35,24 @@
 #define MAX30102_REG_REV_ID 0xFE
 #define MAX30102_REG_PART_ID 0xFF
 
-#define MAX30102_CONFIG_DEFAULT() {   \
-    .led_mode = 0x3,                  \
-                                      \
-    .sample_avg = 0x0,                \
-    .sample_rate = 0x1,               \
-    .pulse_width = 0x3,               \
-    .adc_range = MAX30102_ADC_8192NA, \
-                                      \
-    .red_led_current = 0x24,          \
-    .ir_led_current = 0x24,           \
-                                      \
-    .fifo_rollover_en = true,         \
-    .fifo_almost_full = 0x0F,         \
-                                      \
+#define MAX30102_LED_CURRENT_LOW 0x1F    // ~6.2 mA
+#define MAX30102_LED_CURRENT_MEDIUM 0x24 // ~7.2 mA
+#define MAX30102_LED_CURRENT_HIGH 0x3F   // ~12.6 mA
+
+#define MAX30102_CONFIG_DEFAULT() {                 \
+    .led_mode = 0x3,                                \
+                                                    \
+    .sample_avg = 0x0,                              \
+    .sample_rate = 0x1,                             \
+    .pulse_width = 0x3,                             \
+    .adc_range = 0x02,                              \
+                                                    \
+    .red_led_current = MAX30102_LED_CURRENT_MEDIUM, \
+    .ir_led_current = MAX30102_LED_CURRENT_MEDIUM,  \
+                                                    \
+    .fifo_rollover_en = true,                       \
+    .fifo_almost_full = 0x0F,                       \
+                                                    \
     .int_en = true}
 
 typedef struct
@@ -103,6 +107,6 @@ esp_err_t MAX30102_write_field(
 esp_err_t MAX30102_reset(void);
 
 /// @brief Call to toggle shutdown (low power mode)
-/// @param isShutDown 
-/// @return 
+/// @param isShutDown
+/// @return
 esp_err_t MAX30102_shutdown_toggle(bool *isShutDown);

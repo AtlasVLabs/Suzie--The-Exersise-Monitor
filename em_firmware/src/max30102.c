@@ -2,6 +2,7 @@
 
 #define MAX30102_PART_ID 0X15
 
+
 static i2c_master_dev_handle_t max30102_handle = NULL;
 static const char *TAG = "MAX30102";
 
@@ -67,20 +68,43 @@ esp_err_t MAX30102_config(const max30102_config_t *config)
         "failed to clear FIFO read pointer");
 
     // Set FIFO behavior
-    uint8_t rol_en = 0x01; // rollover enabled
-    uint8_t a_full = 0x0F; // interrupt when 17 samples are in FIFO
 
-    uint8_t fifo_config = 0x00;
+    uint8_t fifo_config = ((config->sample_avg & 0x7) << 5) |
+                          ((config->fifo_rollover_en & 0x1) << 4) |
+                          (config->fifo_almost_full & 0xF);
 
-    fifo_config |= ((config->sample_avg & 0x7) << 5) |
-                   ((rol_en & 0x1) << 4) | a_full & 0xF;
-
-    max30102_write_reg(MAX30102_REG_FIFO_CONFIG, fifo_config);
+    ESP_RETURN_ON_ERROR(
+        MAX30102_write_reg(MAX30102_REG_FIFO_CONFIG, fifo_config),
+        TAG,
+        "failed to write the FIFO config reg");
 
     // Set sample rate / pulse width / ADC range
+    uint8_t spo2_config = (config->adc_range & 0x03) << 5 |
+                          (config->sample_rate & 0x07) << 2 |
+                          (config->pulse_width & 0x03);
 
+    ESP_RETURN_ON_ERROR(
+        MAX30102_write_reg(MAX30102_REG_SPO2_CONFIG, spo2_config),
+        TAG,
+        "failed to write the SpO2 config reg");
     // Set LED current
+    // red led
+    ESP_RETURN_ON_ERROR(
+        MAX30102_write_reg(MAX30102_REG_LED1_PA, config->red_led_current),
+        TAG,
+        "failed to set red LED current");
+    // IR led
+    ESP_RETURN_ON_ERROR(
+        MAX30102_write_reg(MAX30102_REG_LED2_PA, config->ir_led_current),
+        TAG,
+        "failed to set IR LED current");
+
     // Set mode
+    ESP_RETURN_ON_ERROR(
+        MAX30102_write_reg(MAX30102_REG_MODE_CONFIG, config->led_mode),
+        TAG,
+        "failed to set MAX30102 mode");
+
     return ESP_OK;
 }
 
@@ -135,7 +159,7 @@ esp_err_t MAX30102_write_field(
     uint8_t value)
 {
     esp_err_t err_code;
-    uint8_t reg_value = 0xAE; // what is in our register
+    uint8_t reg_value = 0x00; // what is in our register
     // read the register
     ESP_RETURN_ON_ERROR(
         MAX30102_read_reg(reg, &reg_value),
@@ -160,7 +184,7 @@ esp_err_t MAX30102_reset(void)
         MAX30102_write_field(
             MAX30102_REG_MODE_CONFIG,
             0x40,
-            5,
+            6,
             1),
         TAG,
         "failed to set MAX30102 reset bit");
@@ -177,9 +201,7 @@ esp_err_t MAX30102_reset(void)
             "cannot read the reset bit");
 
         // mask and bit shift
-        value &= ~0x40;
-
-        value = value >> 6;
+        value = (value & 0x40) >> 6;
 
     } while (value);
 
