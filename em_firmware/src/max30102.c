@@ -2,7 +2,6 @@
 
 #define MAX30102_PART_ID 0X15
 
-
 static i2c_master_dev_handle_t max30102_handle = NULL;
 static const char *TAG = "MAX30102";
 
