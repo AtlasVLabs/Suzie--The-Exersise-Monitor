@@ -4,6 +4,8 @@
 #include "driver/i2c_master.h"
 #include "esp_check.h"
 #include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 #define BMI160_I2C_ADDR_DEFAULT 0x68
 
@@ -26,8 +28,26 @@
 
 typedef struct
 {
+    accel_pwr_mode_t apm;
+    gyro_pwr_mode_t gpm;
 
 } bmi160_config_t;
+
+typedef enum
+{
+    bmi160_accel_pwr_suspend = 0x10,
+    bmi160_accel_pwr_normal = 0x11,
+    bmi160_accel_pwr_low_pwr = 0x12,
+
+}
+accel_pwr_mode_t;
+
+typedef enum
+{
+    bmi160_agyro_pwr_suspend = 0x14,
+    bmi160_agyro_pwr_normal = 0x15,
+    bmi160_agyro_pwr_fast_startup = 0x17
+} gyro_pwr_mode_t;
 
 esp_err_t BMI160_init(i2c_master_bus_handle_t bus_handle);
 esp_err_t BMI160_config(const bmi160_config_t *);
@@ -53,6 +73,12 @@ esp_err_t BMI160_write_field(
     uint8_t shift,
     uint8_t value);
 
-esp_err_t BMI160_reset(void);
+esp_err_t BMI160_soft_reset(void);
 
-esp_err_t BMI160_shutdown_toggle(bool *isShutDown);
+esp_err_t BMI160_int_reset(void);
+
+esp_err_t BMI160_step_ctr_reset(void);
+
+esp_err_t BMI160_set_accel_pwr_mode(accel_pwr_mode);
+
+esp_err_t BMI160_set_gyro_pwr_mode(gyro_pwr_mode);

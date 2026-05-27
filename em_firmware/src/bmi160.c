@@ -1,7 +1,7 @@
 #include "bmi160.h"
 
 static i2c_master_dev_handle_t bmi160_handle = NULL;
-static const char *TAG = "MAX30102";
+static const char *TAG = "BMI160";
 
 #define BMI160_PART_ID 0xD1
 
@@ -46,23 +46,112 @@ esp_err_t BMI160_config(const bmi160_config_t *config)
 
 esp_err_t BMI160_write_reg(
     uint8_t reg,
-    uint8_t value);
+    uint8_t value)
+{
+    // writing to an 8bit register
+    const uint8_t data[2] = {
+        reg,
+        value,
+    };
+
+    return i2c_master_transmit(
+        bmi160_handle,
+        data,
+        sizeof(data),
+        -1);
+}
 
 esp_err_t BMI160_read_reg(
     uint8_t reg,
-    uint8_t *value);
+    uint8_t *value)
+{
+    return i2c_master_transmit_receive(
+        bmi160_handle,
+        &reg,
+        1,
+        value,
+        1,
+        -1);
+}
 
 esp_err_t BMI160_read_bytes(
     uint8_t reg,
     uint8_t *buffer,
-    size_t length);
+    size_t length)
+{
+    return i2c_master_transmit_receive(
+        bmi160_handle,
+        &reg,
+        1,
+        buffer,
+        length,
+        -1);
+}
 
 esp_err_t BMI160_write_field(
     uint8_t reg,
     uint8_t mask,
     uint8_t shift,
-    uint8_t value);
+    uint8_t value)
+{
+    esp_err_t err_code;
+    uint8_t reg_value = 0x00; // what is in our register
+    // read the register
+    ESP_RETURN_ON_ERROR(
+        BMI160_read_reg(reg, &reg_value),
+        TAG,
+        "failed to read register before updating bit field");
 
-esp_err_t BMI160_reset(void);
+    // clear out bits we need to change
+    reg_value &= ~mask;
+    // add in the new value shifted to the right place
+    reg_value |= (value << shift) & mask;
+    // write the new value t the register
+    ESP_RETURN_ON_ERROR(
+        BMI160_write_reg(reg, reg_value),
+        TAG,
+        "failed to write updated bit field to register");
+    return ESP_OK;
+}
 
-esp_err_t BMI160_shutdown_toggle(bool *isShutDown);
+esp_err_t BMI160_soft_reset(void)
+{
+    // send a reset byte
+    BMI160_write_reg(BMI160_REG_CMD, 0xB6);
+    // 50ms delay
+    vTaskDelay(pdMS_TO_TICKS(50));
+}
+
+esp_err_t BMI160_int_reset(void)
+{
+}
+
+esp_err_t BMI160_step_ctr_reset(void)
+{
+}
+
+esp_err_t BMI160_set_accel_pwr_mode(accel_pwr_mode_t apm)
+{
+    ESP_RETURN_ON_ERROR(
+        BMI160_write_reg(BMI160_REG_CMD, apm),
+        TAG,
+        "failed to set BMI160 accel power mode");
+
+    //rounded up from 3.2
+    vTaskDelay(pdMS_TO_TICKS(4));
+
+    return ESP_OK;
+}
+
+esp_err_t BMI160_set_gyro_pwr_mode(gyro_pwr_mode_t gpm)
+{
+    ESP_RETURN_ON_ERROR(
+        BMI160_write_reg(BMI160_REG_CMD, gpm),
+        TAG,
+        "failed to set BMI160 gyro power mode");
+
+    // 55ms delay for startup
+    vTaskDelay(pdMS_TO_TICKS(55));
+
+    return ESP_OK;
+}
