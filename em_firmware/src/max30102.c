@@ -157,7 +157,7 @@ esp_err_t MAX30102_write_field(
     uint8_t shift,
     uint8_t value)
 {
-    esp_err_t err_code;
+
     uint8_t reg_value = 0x00; // what is in our register
     // read the register
     ESP_RETURN_ON_ERROR(
