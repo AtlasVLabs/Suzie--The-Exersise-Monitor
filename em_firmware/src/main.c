@@ -30,8 +30,10 @@ void app_main()
 
     int16_t ax, ay, az;
     float ax_g, ay_g, az_g;
-    double alpha = .75;
-    float smooth_movement = 0, jitter = 0;
+    double accel_alpha = .3;
+    double jitter_alpha = .75;
+    float a_filtered = 0, noise = 0, jitter = 0;
+    float temp = 0;
 
     while (1)
     {
@@ -45,43 +47,57 @@ void app_main()
         // printf(">ay_g:%f\n", ay_g);
         // printf(">az_g:%f\n", az_g);
 
-        // seperation of jitter vs reg motion
+        // seperation of noise vs reg motion
         // get our magnitude
         float a_mag = sqrtf(ax_g * ax_g + ay_g * ay_g + az_g * az_g);
-        float dynamic_accel = a_mag - 1.0f;
-        float movement_amount = fabsf(dynamic_accel);
+        float a_abs = fabsf(a_mag - 1.0f);
 
-        // reading from uart
-        char ch[5];
+        // // reading from uart
+        // char ch[5];
 
-        int len = uart_read_bytes(UART_NUM_0, &ch, 5, 0); // timeout = 0, non-blocking
-        if (len > 0)
-        {
-            float value = strtof(ch, NULL);
-            if (alpha + value >= 0 && alpha + value <= 1)
-            {
-                alpha += value;
-            }
-            else if (alpha + value > 1)
-            {
-                alpha = 1;
-            }
-            else if (alpha + value < 0)
-            {
-                alpha = 0;
-            }
-        }
+        // int len = uart_read_bytes(UART_NUM_0, &ch, 5, 0); // timeout = 0, non-blocking
+        // if (len > 0)
+        // {
+        //     float value = strtof(ch, NULL);
+        //     if (alpha + value >= 0 && alpha + value <= 1)
+        //     {
+        //         alpha += value;
+        //     }
+        //     else if (alpha + value > 1)
+        //     {
+        //         alpha = 1;
+        //     }
+        //     else if (alpha + value < 0)
+        //     {
+        //         alpha = 0;
+        //     }
+        // }
 
         // signal = fast + slow
-        smooth_movement = smooth_movement + alpha * (dynamic_accel - smooth_movement);
-        jitter = dynamic_accel - smooth_movement;
+        a_filtered = a_filtered + accel_alpha * (a_abs - a_filtered);
+        noise = a_abs - a_filtered;
+        
+        //should help with some noise
+        if(a_filtered < 0.2){
+            a_filtered = 0;
+        }
+
+
+        temp = temp + jitter_alpha * (a_abs - temp);
+        jitter = a_abs - temp;
+        jitter = jitter * jitter;
 
         printf(">a_mag:%f\n", a_mag);
-        printf(">smooth_movement:%f\n", smooth_movement);
+        printf(">a_filtered:%f\n", a_filtered);
+        printf(">noise:%f\n", noise);
         printf(">jitter:%f\n", jitter);
-        printf(">alpha:%f\n", alpha);
+        printf(">jitterx2:%f\n", jitter * jitter);
+       
+        printf(">temp:%f\n", temp);
 
-        vTaskDelay(pdMS_TO_TICKS(10));
+        // make an envelope for peak detection
+
+        vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
 
