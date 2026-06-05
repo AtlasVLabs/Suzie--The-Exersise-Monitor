@@ -76,23 +76,23 @@ void app_main()
         // signal = fast + slow
         a_filtered = a_filtered + accel_alpha * (a_abs - a_filtered);
         noise = a_abs - a_filtered;
-        
-        //should help with some noise
-        if(a_filtered < 0.2){
+
+        // should help with some noise
+        if (a_filtered < 0.2)
+        {
             a_filtered = 0;
         }
-
 
         temp = temp + jitter_alpha * (a_abs - temp);
         jitter = a_abs - temp;
         jitter = jitter * jitter;
 
-        printf(">a_mag:%f\n", a_mag);
+        printf(">a_abs:%f\n", a_abs);
         printf(">a_filtered:%f\n", a_filtered);
         printf(">noise:%f\n", noise);
         printf(">jitter:%f\n", jitter);
         printf(">jitterx2:%f\n", jitter * jitter);
-       
+
         printf(">temp:%f\n", temp);
 
         // make an envelope for peak detection
