@@ -20,11 +20,12 @@ void app_main()
     float accel_filt = 0;        // accel filtered
     float noise = 0;             // system noise
     float accel_filt_mod = 0;    // accel filt modified for easier peak detection
-    float p_count = 0;           // peak count
+    int p_count = 0;             // peak count
     float p_env = 0;             // peak envelope
     float p_threshold = 0;       // peak threshold
     float p_alpha_release = .25; // alpha for the peak envelope. Slow decent after peak in signal
     bool isAbove = false;        // is the accel signal above p_threshold
+    bool peak_ready = false;     // are we ready to read peaks?
 
     // inits-------------------------------------------------
     uart_driver_install(UART_NUM_0, 1024, 0, 0, NULL, 0);
@@ -67,33 +68,46 @@ void app_main()
         // Seperate noise from motion
         accel_filt = accel_filt + accel_alpha * (a_abs - accel_filt);
         noise = a_abs - accel_filt;
+
+        // clamping to stop with noise
+        if (accel_filt < 0.15)
+            accel_filt = 0;
+
+        // modifying the signal a bit
+        if (accel_filt > 0)
+            accel_filt_mod = sqrtf(accel_filt) + .5; // add a baseline and sqrt the signal to compress the signal. We just need to count peaks here
+        else
+            accel_filt_mod = 0;
+
         // define the envelope for peak detection
         if (accel_filt_mod > p_env)
             p_env = accel_filt_mod; // instant rise
         else
             p_env = p_env + p_alpha_release * (accel_filt_mod - p_env); // slow fall
 
-        // clamping to stop with noise
-        if (accel_filt < 0.15)
-            accel_filt = 0;
-
         // threshold (95% of the envelope)
         p_threshold = p_env * .95;
 
-        // modifying the signal a bit
-        if (accel_filt > 0)
-            accel_filt_mod = sqrtf(accel_filt) + .5; // add a baseline and sqrt the signal to compress the signal. We just need to count peaks here
-
-        if (accel_filt_mod >= p_threshold && !isAbove)
-            isAbove = true;
-
-        if (accel_filt_mod < p_threshold && isAbove)
+        if (accel_filt_mod > 0.8f)
+        {
+            if (accel_filt_mod > p_threshold)
+            {
+                isAbove = true;
+            }
+            if (isAbove && accel_filt_mod <= p_threshold)
+            {
+                p_count++;
+                isAbove = false;
+            }
+        }
+        else
         {
             isAbove = false;
-            p_count++;
+            peak_ready = false;
         }
 
         // debuging purposes
+        printf(">a_mag:%f\n", a_mag);
         printf(">a_abs:%f\n", a_abs);
         printf(">accel_filt:%f\n", accel_filt);
         printf(">noise:%f\n", noise);
@@ -102,7 +116,7 @@ void app_main()
         printf(">p_alpha_release:%f\n", p_alpha_release);
         printf(">p_threshold:%f\n", p_threshold);
         printf(">accel_filt_mod:%f\n", accel_filt_mod);
-        printf(">p_count:%f\n", p_count);
+        printf(">p_count:%d\n", p_count);
 
         // make an envelope for peak detection
         vTaskDelay(pdMS_TO_TICKS(50));
