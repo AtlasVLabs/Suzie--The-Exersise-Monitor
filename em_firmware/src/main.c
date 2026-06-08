@@ -13,98 +13,98 @@
 
 void app_main()
 {
+    // variables---------------------------------------------
+    int16_t ax, ay, az;          // raw accel values
+    float ax_g, ay_g, az_g;      // accel values in gs
+    double accel_alpha = .60;    // alpha value to smooth out accel
+    float accel_filt = 0;        // accel filtered
+    float noise = 0;             // system noise
+    float accel_filt_mod = 0;    // accel filt modified for easier peak detection
+    float p_count = 0;           // peak count
+    float p_env = 0;             // peak envelope
+    float p_threshold = 0;       // peak threshold
+    float p_alpha_release = .25; // alpha for the peak envelope. Slow decent after peak in signal
+    bool isAbove = false;        // is the accel signal above p_threshold
 
-    uart_driver_install(UART_NUM_0, 1024, 0, 0, NULL, 0); //
-
+    // inits-------------------------------------------------
+    uart_driver_install(UART_NUM_0, 1024, 0, 0, NULL, 0);
     i2c_bus_init();
     MAX30102_init(get_master_bus_handle());
     BMI160_init(get_master_bus_handle());
-
     max30102_config_t maxconfig = MAX30102_CONFIG_DEFAULT();
     bmi160_config_t bmiconfig = {
         .apm = bmi160_accel_pwr_normal,
         .gpm = bmi160_gyro_pwr_normal};
-
     BMI160_config(&bmiconfig);
     MAX30102_config(&maxconfig);
 
-    int16_t ax, ay, az;
-    float ax_g, ay_g, az_g;
-    double accel_alpha = .3;
-    double jitter_alpha = .75;
-    float a_filtered = 0, noise = 0, jitter = 0;
-    float temp = 0;
-
     while (1)
     {
+        // read accel values
         BMI160_read_accel_raw(&ax, &ay, &az);
-
+        // turn those into gs
         ax_g = ax / 8192.0f;
         ay_g = ay / 8192.0f;
         az_g = az / 8192.0f;
 
-        // printf(">ax_g:%f\n", ax_g);
-        // printf(">ay_g:%f\n", ay_g);
-        // printf(">az_g:%f\n", az_g);
+        float a_mag = sqrtf(ax_g * ax_g + ay_g * ay_g + az_g * az_g); // accel magnitude
+        float a_abs = fabsf(a_mag - 1.0f);                            // abs magnitude
 
-        // seperation of noise vs reg motion
-        // get our magnitude
-        float a_mag = sqrtf(ax_g * ax_g + ay_g * ay_g + az_g * az_g);
-        float a_abs = fabsf(a_mag - 1.0f);
-
-        // // reading from uart
-        // char ch[5];
-
-        // int len = uart_read_bytes(UART_NUM_0, &ch, 5, 0); // timeout = 0, non-blocking
-        // if (len > 0)
-        // {
-        //     float value = strtof(ch, NULL);
-        //     if (alpha + value >= 0 && alpha + value <= 1)
-        //     {
-        //         alpha += value;
-        //     }
-        //     else if (alpha + value > 1)
-        //     {
-        //         alpha = 1;
-        //     }
-        //     else if (alpha + value < 0)
-        //     {
-        //         alpha = 0;
-        //     }
-        // }
-
-        // signal = fast + slow
-        a_filtered = a_filtered + accel_alpha * (a_abs - a_filtered);
-        noise = a_abs - a_filtered;
-
-        // should help with some noise
-        if (a_filtered < 0.2)
+        // reading from uart (debugging only)
+        char ch[5];
+        int len = uart_read_bytes(UART_NUM_0, &ch, 5, 0); // timeout = 0, non-blocking
+        if (len > 0)
         {
-            a_filtered = 0;
+            float value = strtof(ch, NULL);
+            if (p_alpha_release + value >= 0 && p_alpha_release + value <= 1)
+                p_alpha_release += value;
+            else if (p_alpha_release + value > 1)
+                p_alpha_release = 1;
+            else if (p_alpha_release + value < 0)
+                p_alpha_release = 0;
         }
 
-        temp = temp + jitter_alpha * (a_abs - temp);
-        jitter = a_abs - temp;
-        jitter = jitter * jitter;
+        // Seperate noise from motion
+        accel_filt = accel_filt + accel_alpha * (a_abs - accel_filt);
+        noise = a_abs - accel_filt;
+        // define the envelope for peak detection
+        if (accel_filt_mod > p_env)
+            p_env = accel_filt_mod; // instant rise
+        else
+            p_env = p_env + p_alpha_release * (accel_filt_mod - p_env); // slow fall
 
+        // clamping to stop with noise
+        if (accel_filt < 0.15)
+            accel_filt = 0;
+
+        // threshold (95% of the envelope)
+        p_threshold = p_env * .95;
+
+        // modifying the signal a bit
+        if (accel_filt > 0)
+            accel_filt_mod = sqrtf(accel_filt) + .5; // add a baseline and sqrt the signal to compress the signal. We just need to count peaks here
+
+        if (accel_filt_mod >= p_threshold && !isAbove)
+            isAbove = true;
+
+        if (accel_filt_mod < p_threshold && isAbove)
+        {
+            isAbove = false;
+            p_count++;
+        }
+
+        // debuging purposes
         printf(">a_abs:%f\n", a_abs);
-        printf(">a_filtered:%f\n", a_filtered);
+        printf(">accel_filt:%f\n", accel_filt);
         printf(">noise:%f\n", noise);
-        printf(">jitter:%f\n", jitter);
-        printf(">jitterx2:%f\n", jitter * jitter);
-
-        printf(">temp:%f\n", temp);
+        printf(">alpha:%f\n", accel_alpha);
+        printf(">p_env:%f\n", p_env);
+        printf(">p_alpha_release:%f\n", p_alpha_release);
+        printf(">p_threshold:%f\n", p_threshold);
+        printf(">accel_filt_mod:%f\n", accel_filt_mod);
+        printf(">p_count:%f\n", p_count);
 
         // make an envelope for peak detection
-
         vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
-
-// Read sensor task
-
-// Process Data task
-
-//_______________________________________
-
-// FUNCTIONS
