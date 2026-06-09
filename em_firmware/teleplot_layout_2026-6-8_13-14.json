@@ -1,0 +1,69 @@
+{
+   "widgets": [
+      {
+         "type": "chart",
+         "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 0
+         },
+         "series": [
+            {
+               "name": "p_threshold",
+               "sourceNames": [
+                  "p_threshold"
+               ],
+               "formula": "",
+               "options": {
+                  "_serie": "p_threshold",
+                  "_id": "data-serie-48",
+                  "stroke": "rgba(52,152,219,1)",
+                  "fill": "rgba(52,152,219,0.1)"
+               },
+               "type": "number"
+            },
+            {
+               "name": "accel_filt_mod",
+               "sourceNames": [
+                  "accel_filt_mod"
+               ],
+               "formula": "",
+               "options": {
+                  "_serie": "accel_filt_mod",
+                  "_id": "data-serie-49",
+                  "stroke": "rgba(46,204,113,1)",
+                  "fill": "rgba(46,204,113,0.1)"
+               },
+               "type": "number"
+            }
+         ]
+      },
+      {
+         "type": "chart",
+         "gridPos": {
+            "h": 6,
+            "w": 12,
+            "x": 0,
+            "y": 0
+         },
+         "series": [
+            {
+               "name": "p_count",
+               "sourceNames": [
+                  "p_count"
+               ],
+               "formula": "",
+               "options": {
+                  "_serie": "p_count",
+                  "_id": "data-serie-47",
+                  "stroke": "rgba(231,76,60,1)",
+                  "fill": "rgba(231,76,60,0.1)"
+               },
+               "type": "number"
+            }
+         ]
+      }
+   ],
+   "viewDuration": "30"
+}

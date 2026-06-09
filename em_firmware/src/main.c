@@ -16,16 +16,19 @@ void app_main()
     // variables---------------------------------------------
     int16_t ax, ay, az;          // raw accel values
     float ax_g, ay_g, az_g;      // accel values in gs
+    float a_mag = 0;             // accel mag
+    float a_abs = 0;             // absolute accel sans gravity (in gs)
     double accel_alpha = .60;    // alpha value to smooth out accel
     float accel_filt = 0;        // accel filtered
     float noise = 0;             // system noise
     float accel_filt_mod = 0;    // accel filt modified for easier peak detection
     int p_count = 0;             // peak count
+    int startup_samples = 20;    // samples to ignore during startup
     float p_env = 0;             // peak envelope
     float p_threshold = 0;       // peak threshold
     float p_alpha_release = .25; // alpha for the peak envelope. Slow decent after peak in signal
     bool isAbove = false;        // is the accel signal above p_threshold
-    bool peak_ready = false;     // are we ready to read peaks?
+    float cutoff = 0.12f;
 
     // inits-------------------------------------------------
     uart_driver_install(UART_NUM_0, 1024, 0, 0, NULL, 0);
@@ -41,6 +44,13 @@ void app_main()
 
     while (1)
     {
+        if (startup_samples > 0)
+        {
+            startup_samples--;
+            vTaskDelay(pdMS_TO_TICKS(50));
+            continue;
+        }
+
         // read accel values
         BMI160_read_accel_raw(&ax, &ay, &az);
         // turn those into gs
@@ -48,35 +58,31 @@ void app_main()
         ay_g = ay / 8192.0f;
         az_g = az / 8192.0f;
 
-        float a_mag = sqrtf(ax_g * ax_g + ay_g * ay_g + az_g * az_g); // accel magnitude
-        float a_abs = fabsf(a_mag - 1.0f);                            // abs magnitude
+        a_mag = sqrtf(ax_g * ax_g + ay_g * ay_g + az_g * az_g); // accel magnitude
+        a_abs = fabsf(a_mag - 1.0f);                            // abs magnitude
 
         // reading from uart (debugging only)
-        char ch[5];
+        char ch[6];
         int len = uart_read_bytes(UART_NUM_0, &ch, 5, 0); // timeout = 0, non-blocking
         if (len > 0)
         {
+            ch[len] = '\0';
             float value = strtof(ch, NULL);
-            if (p_alpha_release + value >= 0 && p_alpha_release + value <= 1)
-                p_alpha_release += value;
-            else if (p_alpha_release + value > 1)
-                p_alpha_release = 1;
-            else if (p_alpha_release + value < 0)
-                p_alpha_release = 0;
+            cutoff = value;
         }
 
         // Seperate noise from motion
         accel_filt = accel_filt + accel_alpha * (a_abs - accel_filt);
         noise = a_abs - accel_filt;
 
-        // clamping to stop with noise
-        if (accel_filt < 0.15)
-            accel_filt = 0;
-
         // modifying the signal a bit
         if (accel_filt > 0)
             accel_filt_mod = sqrtf(accel_filt) + .5; // add a baseline and sqrt the signal to compress the signal. We just need to count peaks here
         else
+            accel_filt_mod = 0;
+
+        // clamping to stop with noise
+        if (accel_filt <= cutoff)
             accel_filt_mod = 0;
 
         // define the envelope for peak detection
@@ -103,10 +109,10 @@ void app_main()
         else
         {
             isAbove = false;
-            peak_ready = false;
         }
 
         // debuging purposes
+        printf(">cutoff:%f\n", cutoff);
         printf(">a_mag:%f\n", a_mag);
         printf(">a_abs:%f\n", a_abs);
         printf(">accel_filt:%f\n", accel_filt);
@@ -118,7 +124,6 @@ void app_main()
         printf(">accel_filt_mod:%f\n", accel_filt_mod);
         printf(">p_count:%d\n", p_count);
 
-        // make an envelope for peak detection
         vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
