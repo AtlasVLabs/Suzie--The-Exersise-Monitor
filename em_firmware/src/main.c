@@ -23,6 +23,7 @@ void app_main()
     float noise = 0;             // system noise
     float accel_filt_mod = 0;    // accel filt modified for easier peak detection
     int p_count = 0;             // peak count
+    float rep_count = 0;         // rep count
     int startup_samples = 20;    // samples to ignore during startup
     float p_env = 0;             // peak envelope
     float p_threshold = 0;       // peak threshold
@@ -83,7 +84,7 @@ void app_main()
 
         // clamping to stop with noise
         if (accel_filt <= cutoff)
-            accel_filt_mod = 0;
+            accel_filt_mod = 0; // clamping down our modded signal based off the filtered signal
 
         // define the envelope for peak detection
         if (accel_filt_mod > p_env)
@@ -109,6 +110,14 @@ void app_main()
         else
         {
             isAbove = false;
+            // end of a signal clump
+            if (accel_filt_mod == 0)
+            {
+                // turn p_count into reps
+                rep_count = (p_count / 2) - 0.5;
+                // reset p_count
+                p_count = 0;
+            }
         }
 
         // debuging purposes
