@@ -10,6 +10,9 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+#include "driver/gpio.h"
+
+#define LED_GPIO 2
 
 void app_main()
 {
@@ -30,6 +33,7 @@ void app_main()
     float p_alpha_release = .25; // alpha for the peak envelope. Slow decent after peak in signal
     bool isAbove = false;        // is the accel signal above p_threshold
     float cutoff = 0.12f;
+    //bool led_state = false;
 
     // inits-------------------------------------------------
     uart_driver_install(UART_NUM_0, 1024, 0, 0, NULL, 0);
@@ -42,6 +46,10 @@ void app_main()
         .gpm = bmi160_gyro_pwr_normal};
     BMI160_config(&bmiconfig);
     MAX30102_config(&maxconfig);
+
+    gpio_reset_pin(LED_GPIO);
+    gpio_set_direction(LED_GPIO, GPIO_MODE_OUTPUT);
+    gpio_set_level(LED_GPIO, 0);
 
     while (1)
     {
@@ -114,24 +122,31 @@ void app_main()
             if (accel_filt_mod == 0)
             {
                 // turn p_count into reps
-                rep_count = (p_count / 2) - 0.5;
-                // reset p_count
-                p_count = 0;
+                if (p_count > 0)
+                {
+                    rep_count += ((float)p_count - 1.0f) / 2.0f;
+                    if (rep_count < 0)
+                        rep_count = 0;
+
+                    // reset p_count
+                    p_count = 0;
+                }
             }
         }
 
         // debuging purposes
-        printf(">cutoff:%f\n", cutoff);
-        printf(">a_mag:%f\n", a_mag);
-        printf(">a_abs:%f\n", a_abs);
-        printf(">accel_filt:%f\n", accel_filt);
-        printf(">noise:%f\n", noise);
-        printf(">alpha:%f\n", accel_alpha);
-        printf(">p_env:%f\n", p_env);
-        printf(">p_alpha_release:%f\n", p_alpha_release);
+        // printf(">cutoff:%f\n", cutoff);
+        // printf(">a_mag:%f\n", a_mag);
+        // printf(">a_abs:%f\n", a_abs);
+        // printf(">accel_filt:%f\n", accel_filt);
+        // printf(">noise:%f\n", noise);
+        // printf(">alpha:%f\n", accel_alpha);
+        // printf(">p_env:%f\n", p_env);
+        // printf(">p_alpha_release:%f\n", p_alpha_release);
         printf(">p_threshold:%f\n", p_threshold);
         printf(">accel_filt_mod:%f\n", accel_filt_mod);
         printf(">p_count:%d\n", p_count);
+        printf(">rep_count:%f\n", rep_count);
 
         vTaskDelay(pdMS_TO_TICKS(50));
     }
