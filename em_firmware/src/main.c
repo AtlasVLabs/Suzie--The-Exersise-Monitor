@@ -12,29 +12,32 @@
 #include <string.h>
 #include "driver/gpio.h"
 
-#define LED_GPIO 2
+#define REP_DECAY_MS 1500 // 1.5 SECOND
+
+// variables---------------------------------------------
+int16_t ax, ay, az;             // raw accel values
+float ax_g, ay_g, az_g;         // accel values in gs
+float a_mag = 0;                // accel mag
+float a_abs = 0;                // absolute accel sans gravity (in gs)
+double accel_alpha = .60;       // alpha value to smooth out accel
+float accel_filt = 0;           // accel filtered
+float noise = 0;                // system noise
+float accel_filt_mod = 0;       // accel filt modified for easier peak detection
+int p_count = 0;                // peak count
+float rep_count = 0;            // rep count
+int startup_samples = 20;       // samples to ignore during startup
+float p_env = 0;                // peak envelope
+float p_threshold = 0;          // peak threshold
+float p_alpha_release = .25;    // alpha for the peak envelope. Slow decent after peak in signal
+float cutoff = 0.12f;           // clamp for our accel signal
+float rep_decay_start_time = 0; // countdown for our rep decay
+
+// flags---------------------------------------------------
+bool isAbove = false;   // is the accel signal above p_threshold
+bool initDecay = false; // has the rep decay countdown started
 
 void app_main()
 {
-    // variables---------------------------------------------
-    int16_t ax, ay, az;          // raw accel values
-    float ax_g, ay_g, az_g;      // accel values in gs
-    float a_mag = 0;             // accel mag
-    float a_abs = 0;             // absolute accel sans gravity (in gs)
-    double accel_alpha = .60;    // alpha value to smooth out accel
-    float accel_filt = 0;        // accel filtered
-    float noise = 0;             // system noise
-    float accel_filt_mod = 0;    // accel filt modified for easier peak detection
-    int p_count = 0;             // peak count
-    float rep_count = 0;         // rep count
-    int startup_samples = 20;    // samples to ignore during startup
-    float p_env = 0;             // peak envelope
-    float p_threshold = 0;       // peak threshold
-    float p_alpha_release = .25; // alpha for the peak envelope. Slow decent after peak in signal
-    bool isAbove = false;        // is the accel signal above p_threshold
-    float cutoff = 0.12f;
-    //bool led_state = false;
-
     // inits-------------------------------------------------
     uart_driver_install(UART_NUM_0, 1024, 0, 0, NULL, 0);
     i2c_bus_init();
@@ -47,12 +50,11 @@ void app_main()
     BMI160_config(&bmiconfig);
     MAX30102_config(&maxconfig);
 
-    gpio_reset_pin(LED_GPIO);
-    gpio_set_direction(LED_GPIO, GPIO_MODE_OUTPUT);
-    gpio_set_level(LED_GPIO, 0);
-
     while (1)
     {
+        // simple timer
+        uint32_t now_ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
+
         if (startup_samples > 0)
         {
             startup_samples--;
@@ -114,6 +116,10 @@ void app_main()
                 p_count++;
                 isAbove = false;
             }
+
+            // new signal start? reset rep decay timer
+            initDecay = false;
+            rep_decay_start_time = 0;
         }
         else
         {
@@ -130,6 +136,19 @@ void app_main()
 
                     // reset p_count
                     p_count = 0;
+                }
+
+                if (!initDecay)
+                {
+                    // rep decay for half reps
+                    rep_decay_start_time = now_ms;
+                    initDecay = true; // we have started the decay
+                }
+
+                // check decay timer
+                if (now_ms - rep_decay_start_time >= REP_DECAY_MS)
+                {
+                    rep_count = floorf(rep_count);
                 }
             }
         }
