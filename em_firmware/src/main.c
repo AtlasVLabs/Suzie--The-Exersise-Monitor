@@ -12,7 +12,7 @@
 #include <string.h>
 #include "driver/gpio.h"
 
-#define REP_DECAY_MS 1500 // 1.5 SECOND
+#define REP_DECAY_MS 6700 // 6.7 SECOND
 
 // variables---------------------------------------------
 int16_t ax, ay, az;             // raw accel values
