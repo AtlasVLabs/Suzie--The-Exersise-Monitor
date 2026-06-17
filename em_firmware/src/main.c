@@ -11,11 +11,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include "driver/gpio.h"
+#include "imu_service.h"
 
 #define REP_DECAY_MS 6700 // 6.7 SECOND
 
 // variables---------------------------------------------
-int16_t ax, ay, az;             // raw accel values
+short ax, ay, az;               // raw accel values
 float ax_g, ay_g, az_g;         // accel values in gs
 float a_mag = 0;                // accel mag
 float a_abs = 0;                // absolute accel sans gravity (in gs)
@@ -31,6 +32,7 @@ float p_threshold = 0;          // peak threshold
 float p_alpha_release = .25;    // alpha for the peak envelope. Slow decent after peak in signal
 float cutoff = 0.12f;           // clamp for our accel signal
 float rep_decay_start_time = 0; // countdown for our rep decay
+float effort_avg = 0;           // an estimation of the effort put in by the user
 
 // flags---------------------------------------------------
 bool isAbove = false;   // is the accel signal above p_threshold
@@ -50,11 +52,15 @@ void app_main()
     BMI160_config(&bmiconfig);
     MAX30102_config(&maxconfig);
 
+    // accel struct setup
+    accel_samples samples;
+
     while (1)
     {
         // simple timer
         uint32_t now_ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
 
+        // startup delay
         if (startup_samples > 0)
         {
             startup_samples--;
@@ -62,15 +68,17 @@ void app_main()
             continue;
         }
 
-        // read accel values
-        BMI160_read_accel_raw(&ax, &ay, &az);
-        // turn those into gs
-        ax_g = ax / 8192.0f;
-        ay_g = ay / 8192.0f;
-        az_g = az / 8192.0f;
+        // // read accel values
+        // BMI160_read_accel_raw(&ax, &ay, &az);
+        // // turn those into gs
+        // ax_g = ax / 8192.0f;
+        // ay_g = ay / 8192.0f;
+        // az_g = az / 8192.0f;
 
-        a_mag = sqrtf(ax_g * ax_g + ay_g * ay_g + az_g * az_g); // accel magnitude
-        a_abs = fabsf(a_mag - 1.0f);                            // abs magnitude
+        // a_mag = sqrtf(ax_g * ax_g + ay_g * ay_g + az_g * az_g); // accel magnitude
+        // a_abs = fabsf(a_mag - 1.0f);                            // abs magnitude
+
+        read_accel(&samples);
 
         // reading from uart (debugging only)
         char ch[6];
@@ -153,11 +161,14 @@ void app_main()
             }
         }
 
+        // Find the average energy / intensity
+        effort_avg = accel_filt * 0.05 + (1 - 0.05) * effort_avg;
+
         // debuging purposes
         // printf(">cutoff:%f\n", cutoff);
         // printf(">a_mag:%f\n", a_mag);
-        // printf(">a_abs:%f\n", a_abs);
-        // printf(">accel_filt:%f\n", accel_filt);
+        printf(">a_abs:%f\n", a_abs);
+        printf(">accel_filt:%f\n", accel_filt);
         // printf(">noise:%f\n", noise);
         // printf(">alpha:%f\n", accel_alpha);
         // printf(">p_env:%f\n", p_env);
@@ -166,7 +177,12 @@ void app_main()
         printf(">accel_filt_mod:%f\n", accel_filt_mod);
         printf(">p_count:%d\n", p_count);
         printf(">rep_count:%f\n", rep_count);
+        printf(">effort_avg:%f\n", effort_avg);
 
         vTaskDelay(pdMS_TO_TICKS(50));
+
+        //---------------------------------------------
+        //
+        //---------------------------------------------
     }
 }
