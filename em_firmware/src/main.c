@@ -1,6 +1,7 @@
 #include "driver/i2c_master.h"
 #include "driver/uart.h"
 #include <stdio.h>
+#include <stdbool.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
@@ -33,6 +34,9 @@ float p_alpha_release = .25;    // alpha for the peak envelope. Slow decent afte
 float cutoff = 0.12f;           // clamp for our accel signal
 float rep_decay_start_time = 0; // countdown for our rep decay
 float effort_avg = 0;           // an estimation of the effort put in by the user
+uint32_t p_t1 = 0, p_t2 = 0;    // peak time 1 and 2
+float delta = 0, freq = 0;
+bool peak = true;
 
 // flags---------------------------------------------------
 bool isAbove = false;   // is the accel signal above p_threshold
@@ -53,14 +57,13 @@ void app_main()
     MAX30102_config(&maxconfig);
 
     // accel struct setup
-    accel_samples samples;
+    // accel_samples samples;
 
     while (1)
     {
         // simple timer
         uint32_t now_ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
 
-        // startup delay
         if (startup_samples > 0)
         {
             startup_samples--;
@@ -68,17 +71,15 @@ void app_main()
             continue;
         }
 
-        // // read accel values
-        // BMI160_read_accel_raw(&ax, &ay, &az);
-        // // turn those into gs
-        // ax_g = ax / 8192.0f;
-        // ay_g = ay / 8192.0f;
-        // az_g = az / 8192.0f;
+        // read accel values
+        BMI160_read_accel_raw(&ax, &ay, &az);
+        // turn those into gs
+        ax_g = ax / 8192.0f;
+        ay_g = ay / 8192.0f;
+        az_g = az / 8192.0f;
 
-        // a_mag = sqrtf(ax_g * ax_g + ay_g * ay_g + az_g * az_g); // accel magnitude
-        // a_abs = fabsf(a_mag - 1.0f);                            // abs magnitude
-
-        read_accel(&samples);
+        a_mag = sqrtf(ax_g * ax_g + ay_g * ay_g + az_g * az_g); // accel magnitude
+        a_abs = fabsf(a_mag - 1.0f);                            // abs magnitude
 
         // reading from uart (debugging only)
         char ch[6];
@@ -122,6 +123,19 @@ void app_main()
             if (isAbove && accel_filt_mod <= p_threshold)
             {
                 p_count++;
+                peak ^= 1; //toggle for the fun of it
+
+                // // peak frequency
+                // p_t1 = now_ms;
+
+                // if (p_t2 != 0)
+                // {
+                //     delta = (p_t1 - p_t2) / 1000.0f;
+                //     freq = 1 / delta;
+                // }
+
+                // p_t2 = p_t1;
+
                 isAbove = false;
             }
 
@@ -161,14 +175,11 @@ void app_main()
             }
         }
 
-        // Find the average energy / intensity
-        effort_avg = accel_filt * 0.05 + (1 - 0.05) * effort_avg;
-
         // debuging purposes
         // printf(">cutoff:%f\n", cutoff);
         // printf(">a_mag:%f\n", a_mag);
-        printf(">a_abs:%f\n", a_abs);
-        printf(">accel_filt:%f\n", accel_filt);
+        // printf(">a_abs:%f\n", a_abs);
+        // printf(">accel_filt:%f\n", accel_filt);
         // printf(">noise:%f\n", noise);
         // printf(">alpha:%f\n", accel_alpha);
         // printf(">p_env:%f\n", p_env);
@@ -177,12 +188,10 @@ void app_main()
         printf(">accel_filt_mod:%f\n", accel_filt_mod);
         printf(">p_count:%d\n", p_count);
         printf(">rep_count:%f\n", rep_count);
-        printf(">effort_avg:%f\n", effort_avg);
+        printf(">delta:%f\n", delta);
+        printf(">freq:%f\n", freq);
+        printf(">peak:%\n", peak);
 
         vTaskDelay(pdMS_TO_TICKS(50));
-
-        //---------------------------------------------
-        //
-        //---------------------------------------------
     }
 }

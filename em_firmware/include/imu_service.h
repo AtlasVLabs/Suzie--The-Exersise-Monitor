@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include "bmi160.h"
+#include "math.h"
 
 typedef struct read_accel_struct
 {
