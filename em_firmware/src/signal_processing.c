@@ -1,63 +1,72 @@
 #include "signal_processing.h"
 
-void ema_machinef(ema_params *params)
+void ema_machine(float source, float alpha, float *output)
 {
-    params->output = params->output + params->alpha * (params->source - params->output);
+    *output = *output + alpha * (source - *output);
 }
 
-void accel_processing(accel_proc_params *params)
+void lowpass_filter(float alpha, float sig_source, lp_filt_output *out)
 {
-    // Seperate noise from motion
-    params->accel_filt = params->accel_filt + params->accel_alpha * (params->a_abs - params->accel_filt);
-    params->noise = params->a_abs - params->accel_filt;
+    ema_machine(sig_source, alpha, out->sig_filt);
+    *out->noise = sig_source - *out->sig_filt;
+}
 
+float accel_signal_mod(float sig, float cutoff)
+{
+    float sig_mod = 0;
     // modifying the signal a bit
-    if (params->accel_filt > 0)
-        params->accel_filt_mod = sqrtf(params->accel_filt) + .5; // add a baseline and sqrt the signal to compress the signal. We just need to count peaks here
+    if (sig > 0)
+        sig_mod = sqrtf(sig) + .5; // add a baseline and sqrt the signal to compress the signal. We just need to count peaks here
     else
-        params->accel_filt_mod = 0;
+        sig_mod = 0;
 
     // clamping to stop with noise
-    if (params->accel_filt <= params->cutoff)
-        params->accel_filt_mod = 0; // clamping down our modded signal based off the filtered signal
+    if (sig <= cutoff)
+        sig_mod = 0; // clamping down our modded signal based off the filtered signal
 
+    return sig_mod;
+}
+
+float env_creation_irsf(float sig, float fall_alpha)
+{
+    float env = 0;
     // define the envelope for peak detection
-    if (params->accel_filt_mod > params->p_env)
-        params->p_env = params->accel_filt_mod; // instant rise
+    if (sig > env)
+        env = sig; // instant rise
     else
-        params->p_env = params->p_env + params->p_alpha_release * (params->accel_filt_mod - params->p_env); // slow fall
+        // env = env + fall_alpha * (sig - env); // slow fall
+        ema_machine(sig, fall_alpha, &env); // slow fall
+    return env;
+}
 
-    // threshold (95% of the envelope)
-    params->p_threshold = params->p_env * .95;
-
-    if (params->accel_filt_mod > 0.8f)
+void peak_detection(float sig, float p_threshold, float now_ms, peak_det_params *params)
+{
+    // does the signal pass a threshold to not be noise?
+    if (sig > ACCEL_SIG_MOD_MIN)
     {
-        if (params->accel_filt_mod > params->p_threshold)
+        if (sig > p_threshold)
         {
             params->isAbove = true;
         }
-        if (params->isAbove && params->accel_filt_mod <= params->p_threshold)
+        if (params->isAbove && sig <= p_threshold)
         {
             params->p_count++;
             params->isAbove = false;
         }
-
-        // new signal start? reset rep decay timer
-        params->initDecay = false;
-        params->rep_decay_start_time = 0;
     }
     else
     {
-        params->isAbove = false;
-        // end of a signal clump
-        if (params->accel_filt_mod == 0)
+        *params->isAbove = false;
+        // end of signal clump
+        if (sig == 0)
         {
-            // turn p_count into reps
+            // turn peak count to reps
+            // idea: TAKE ALL THE PEAKS IN A CLUMP AND TURN THOSE INTO REPS
             if (params->p_count > 0)
             {
-                params->rep_count += ((float)params->p_count - 1.0f) / 2.0f;
-                if (params->rep_count < 0)
-                    params->rep_count = 0;
+                *params->rep_count += ((float)*params->p_count - 1.0f) / 2.0f;
+                if (*params->rep_count < 0)
+                    *params->rep_count = 0;
 
                 // reset p_count
                 params->p_count = 0;
@@ -66,71 +75,16 @@ void accel_processing(accel_proc_params *params)
             if (!params->initDecay)
             {
                 // rep decay for half reps
-                params->rep_decay_start_time = params->now_ms;
+                *params->rep_decay_start_time = now_ms;
                 params->initDecay = true; // we have started the decay
             }
-
             // check decay timer
-            if (params->now_ms - params->rep_decay_start_time >= REP_DECAY_MS)
+            if (now_ms - *params->rep_decay_start_time >= REP_DECAY_MS)
             {
-                params->rep_count = floorf(params->rep_count);
+                *params->rep_count = floorf(*params->rep_count);
             }
         }
     }
-
-    // Find the average energy / intensity
-    params->effort_avg = params->accel_filt * 0.05 + (1 - 0.05) * params->effort_avg;
-}
-
-void lowpass_filter(lp_filt_params *params)
-{
-    ema_params ep = {
-        .alpha = params->alpha,
-        .source = params->sig_source,
-        .output = params->sig_filt};
-    ema_machinef(&ep);
-    params->noise = params->sig_source - params->sig_filt;
-}
-
-float accel_signal_mod(asm_params *params)
-{
-    // modifying the signal a bit
-    if (params->sig > 0)
-        params->sig_mod = sqrtf(params->sig) + .5; // add a baseline and sqrt the signal to compress the signal. We just need to count peaks here
-    else
-        params->sig_mod = 0;
-
-    // clamping to stop with noise
-    if (params->sig <= params->cutoff)
-        params->sig_mod = 0; // clamping down our modded signal based off the filtered signal
-
-    return params->sig_mod;
-}
-
-float env_creation_irsf(envc_params *params)
-{
-    // define the envelope for peak detection
-    if (params->sig > params->env)
-        params->env = params->sig; // instant rise
-    else
-        params->env = params->env + params->fall_alpha * (params->sig - params->env); // slow fall
-
-    return params->env;
-}
-
-void peak_detection(peak_det_params *params)
-{
-    float p_threshold = params->p_env * params->env_fraction;
-    // does the signal pass a threshold to not be noise?
-    if (params->sig > ACCEL_SIG_MOD_MIN)
-    {
-        if (params->sig > p_threshold)
-        {
-            params->isAbove = true;
-        }
-        if (params->isAbove && params->sig <= p_threshold)
-        {
-            params->p_count++;
-        }
-    }
+    // gather clump time
+    // todo: calculate local clump rep intensity
 }
