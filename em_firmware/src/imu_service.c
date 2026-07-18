@@ -1,7 +1,7 @@
 #include "imu_service.h"
 
 // read accel values
-void read_accel(accel_samples *sample)
+void read_accel(accel_samples_t *sample)
 {
     if (sample == NULL)
         return;

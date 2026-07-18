@@ -11,7 +11,7 @@ typedef struct read_accel_struct
     float a_mag; // accel mag
     float a_abs;
 
-} accel_samples;
+} accel_samples_t;
 
 // read accel values
-void read_accel(accel_samples *sample);
+void read_accel(accel_samples_t *sample);

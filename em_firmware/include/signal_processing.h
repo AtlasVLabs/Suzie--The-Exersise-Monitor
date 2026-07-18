@@ -7,27 +7,27 @@
 
 typedef struct
 {
-    float *sig_filt;
-    float *noise;
-} lp_filt_output;
+    float sig_filt;
+    float noise;
+} lp_filt_output_t;
 
 typedef struct
 {
 
-    bool *isAbove;
-    int *p_count;
-    bool *initDecay;
-    float *rep_decay_start_time;
-    float *rep_count;
+    bool isAbove;
+    int p_count;
+    bool initDecay;
+    float rep_decay_start_time;
+    float rep_count;
 
-} peak_det_params;
+} peak_det_params_t;
 
 void ema_machine(float, float, float *);
 
-void lowpass_filter(float, float, lp_filt_output *);
+void lowpass_filter(lp_filt_output_t *, float, float);
 
-float accel_signal_mod(float, float);
+void accel_signal_mod(float *, float, float);
 
-float env_creation_irsf(float, float);
+void env_creation_irsf(float *, float, float);
 
-void peak_detection();
+void peak_detection(float, float, float, peak_det_params_t *);
