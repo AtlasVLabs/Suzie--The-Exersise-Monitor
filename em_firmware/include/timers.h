@@ -1,4 +1,4 @@
-
+#pragma once
 #include <stdio.h>
 #include <stdbool.h>
 
@@ -21,18 +21,18 @@ typedef struct
 } stopwatch_obj;
 
 /// @brief start an alarm event
-/// @param delay how long it should last for
+/// @param delay_us how long it should last for
 /// @param callback what function is called after
 /// @param alarm an alarm object
-void alarm_start(int64_t delay, timer_callback_t callback, alarm_obj * alarm);
+void alarm_start(alarm_obj * alarm, int64_t delay, timer_callback_t callback);
 
-/// @brief update an alarm event
+/// @brief check up on the alarm and execute callbacks
 /// @param alarm an alarm object
 void alarm_update(alarm_obj *alarm);
 
-/// @brief cancel an alarm event
+/// @brief reset an alarm event
 /// @param alarm an alarm object
-void alarm_cancel(alarm_obj *alarm);
+void alarm_reset(alarm_obj *alarm);
 
 /// @brief checks if the alarm is running
 /// @param alarm an alarm object
@@ -43,6 +43,10 @@ bool alarm_is_active(const alarm_obj *alarm);
 /// @param stopwatch a stopwatch object
 /// @param start_time_us when the event started
 void stopwatch_start(stopwatch_obj *stopwatch, int64_t start_time_us);
+
+/// @brief update the duration counter
+/// @param stopwatch a stopwatch object
+void stopwatch_update(stopwatch_obj *stopwatch);
 
 /// @brief Ends the specified stopwatch event
 /// @param stopwatch a stopwatch object
