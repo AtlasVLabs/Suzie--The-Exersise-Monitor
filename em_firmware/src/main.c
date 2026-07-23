@@ -95,9 +95,9 @@ void app_main()
         // // Seperate noise from motion
         lowpass_filter(&accel_filt_out, accel_alpha, accel_sample.a_abs);
         lowpass_filter(&sig1, 0.2, accel_sample.a_abs);
-        lowpass_filter(&sig3, 0.2, accel_sample.a_abs * accel_sample.a_abs);
         lowpass_filter(&sig2, 0.6, accel_sample.a_abs);
-        sig4.sig_filt = sig1.sig_filt * sig1.sig_filt;
+
+        // rep detection formula R = P-1/2
 
         // env_creation_irsf(&p_env, accel_filt_mod, p_alpha_release);
 
@@ -110,11 +110,9 @@ void app_main()
         // printf(">cutoff:%f\n", cutoff);
         // printf(">a_mag:%f\n", accel_sample.a_mag);
         // printf(">a_abs:%f\n", accel_sample.a_abs);
-        // printf(">sig_filt:%f\n", accel_filt_out.sig_filt);
+        printf(">sig_filt:%f\n", accel_filt_out.sig_filt);
         printf(">sig1:%f\n", sig1.sig_filt);
-        // printf(">sig2:%f\n", sig2.sig_filt);
-        // printf(">sig3:%f\n", sig3.sig_filt);
-        // printf(">sig4:%f\n", sig4.sig_filt);
+        printf(">sig2:%f\n", sig2.sig_filt);
 
         // printf(">accel_filt_mod:%f\n", accel_filt_mod);
 

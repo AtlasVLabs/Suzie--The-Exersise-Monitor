@@ -37,7 +37,7 @@ void alarm_reset(alarm_obj *alarm)
 bool alarm_is_active(const alarm_obj *alarm)
 {
     if (!alarm)
-        return;
+        return false;
     return alarm->active;
 }
 
@@ -61,14 +61,17 @@ void stopwatch_update(stopwatch_obj *stopwatch)
 
 int16_t stopwatch_end(stopwatch_obj *stopwatch)
 {
+    int64_t duration;
     if (!stopwatch || stopwatch->active == false)
-        return;
+        return -1;
+    duration = stopwatch_elapsed(stopwatch);
     *stopwatch = (stopwatch_obj){0};
+    return duration;
 }
 
 int64_t stopwatch_elapsed(const stopwatch_obj *stopwatch)
 {
     if(!stopwatch || stopwatch->active == false)
-        return;
+        return -1;
     return stopwatch->duration_us;
 }
