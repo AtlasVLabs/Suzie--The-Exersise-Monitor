@@ -25,7 +25,7 @@ typedef struct
 /// @param delay_us how long it should last for
 /// @param callback what function is called after
 /// @param alarm an alarm object
-void alarm_start(alarm_obj * alarm, int64_t delay, timer_callback_t callback);
+void alarm_start(alarm_obj *alarm, int64_t delay, timer_callback_t callback);
 
 /// @brief check up on the alarm and execute callbacks
 /// @param alarm an alarm object
@@ -43,7 +43,7 @@ bool alarm_is_active(const alarm_obj *alarm);
 /// @brief start a stopwatch event
 /// @param stopwatch a stopwatch object
 /// @param start_time_us when the event started
-void stopwatch_start(stopwatch_obj *stopwatch, int64_t start_time_us);
+void stopwatch_start(stopwatch_obj *stopwatch);
 
 /// @brief update the duration counter
 /// @param stopwatch a stopwatch object
@@ -58,3 +58,5 @@ int16_t stopwatch_end(stopwatch_obj *stopwatch);
 /// @param stopwatch a stopwatch object
 /// @return elapsed time of the event
 int64_t stopwatch_elapsed(const stopwatch_obj *stopwatch);
+
+bool stopwatch_lap(stopwatch_obj *obj, int64_t *interval_us);

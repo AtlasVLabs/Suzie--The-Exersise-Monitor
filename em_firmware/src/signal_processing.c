@@ -1,5 +1,8 @@
 #include "signal_processing.h"
+#include "timers.h"
 #include <stdio.h>
+
+float p_interval;
 
 void ema_machine(float source, float alpha, float *output)
 {
@@ -36,7 +39,7 @@ void env_creation_irsf(float *env, float sig, float fall_alpha)
         ema_machine(sig, fall_alpha, env); // slow fall
 }
 
-void peak_detection(float sig, float p_threshold, float now_ms, peak_det_params_t *params)
+void peak_detection(float sig, float p_threshold, peak_det_params_t *params)
 {
     // does the signal pass a threshold to not be noise?
     if (sig > ACCEL_SIG_MOD_MIN)
@@ -48,45 +51,20 @@ void peak_detection(float sig, float p_threshold, float now_ms, peak_det_params_
         if (params->isAbove && sig <= p_threshold)
         {
             params->p_count++;
+            params->peakFlag = !params->peakFlag;
             params->isAbove = false;
+
+            int64_t interval_us;
+
+            if (stopwatch_lap(&params->s_obj, &interval_us))
+            {
+                params->p_interval_s =
+                    interval_us / 1000000.0f;
+            }
         }
     }
     else
     {
         params->isAbove = false;
-        // end of signal clump
-        if (sig == 0)
-        {
-            // turn peak count to reps
-            // idea: TAKE ALL THE PEAKS IN A CLUMP AND TURN THOSE INTO REPS
-            if (params->p_count > 0)
-            {
-                params->rep_count += ((float)params->p_count - 1.0f) / 2.0f;
-                if (params->rep_count < 0)
-                    params->rep_count = 0;
-
-                // reset p_count
-                params->p_count = 0;
-            }
-
-            if (!params->initDecay)
-            {
-                // rep decay for half reps
-                params->rep_decay_start_time = now_ms;
-                params->initDecay = true; // we have started the decay
-            }
-            // check decay timer
-            if (now_ms - params->rep_decay_start_time >= REP_DECAY_MS)
-            {
-                params->rep_count = floorf(params->rep_count);
-            }
-        }
     }
-    // gather clump time
-    // todo: calculate local clump rep intensity
-
-    // printf(">sig:%f\n", sig);
-    // printf(">rep_count:%f\n", params->rep_count);
-    // printf(">p_count:%d\n", params->p_count);
-    // printf(">test1:%d\n", params->isAbove);
 }

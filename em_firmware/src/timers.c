@@ -41,7 +41,7 @@ bool alarm_is_active(const alarm_obj *alarm)
     return alarm->active;
 }
 
-void stopwatch_start(stopwatch_obj *stopwatch, int64_t start_time_us)
+void stopwatch_start(stopwatch_obj *stopwatch)
 {
     if (!stopwatch || stopwatch->active == true)
         return;
@@ -49,14 +49,13 @@ void stopwatch_start(stopwatch_obj *stopwatch, int64_t start_time_us)
     // populate the stopwatch
     stopwatch->active = true;
     stopwatch->start_time_us = esp_timer_get_time();
-    stopwatch->duration_us = 0;
 }
 
 void stopwatch_update(stopwatch_obj *stopwatch)
 {
     if (!stopwatch || stopwatch->active == false)
         return;
-    stopwatch->duration_us = stopwatch->start_time_us - esp_timer_get_time();
+    stopwatch->duration_us = esp_timer_get_time() - stopwatch->start_time_us;
 }
 
 int16_t stopwatch_end(stopwatch_obj *stopwatch)
@@ -71,7 +70,27 @@ int16_t stopwatch_end(stopwatch_obj *stopwatch)
 
 int64_t stopwatch_elapsed(const stopwatch_obj *stopwatch)
 {
-    if(!stopwatch || stopwatch->active == false)
+    if (!stopwatch || stopwatch->active == false)
         return -1;
     return stopwatch->duration_us;
+}
+
+bool stopwatch_lap(stopwatch_obj *obj, int64_t *interval_us)
+{
+    int64_t now_us = esp_timer_get_time();
+
+    // First peak: begin timing.
+    if (!obj->active)
+    {
+        stopwatch_start(obj);
+        return false;
+    }
+
+    // Later peaks: measure and restart.
+    stopwatch_update(obj);
+    stopwatch_start(obj);
+
+    *interval_us = obj->duration_us;
+
+    return true;
 }

@@ -1,6 +1,7 @@
 #pragma once
 #include <stdbool.h>
 #include "math.h"
+#include "timers.h"
 #define REP_DECAY_MS 6700 // 6.7 SECOND
 #define ACCEL_SIG_MOD_MIN 0.8f
 //----------------------------
@@ -13,13 +14,11 @@ typedef struct
 
 typedef struct
 {
-
     bool isAbove;
+    stopwatch_obj s_obj;
+    float p_interval_s;
     int p_count;
-    bool initDecay;
-    float rep_decay_start_time;
-    float rep_count;
-
+    bool peakFlag;
 } peak_det_params_t;
 
 void ema_machine(float, float, float *);
@@ -30,4 +29,4 @@ void accel_signal_mod(float *, float, float);
 
 void env_creation_irsf(float *, float, float);
 
-void peak_detection(float, float, float, peak_det_params_t *);
+void peak_detection(float, float, peak_det_params_t *);

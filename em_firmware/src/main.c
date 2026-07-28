@@ -14,6 +14,7 @@
 #include "driver/gpio.h"
 #include "imu_service.h"
 #include "signal_processing.h"
+#include "timers.h"
 
 #define REP_DECAY_MS 6700 // 6.7 SECOND
 
@@ -22,7 +23,7 @@ short ax, ay, az;               // raw accel values
 float ax_g, ay_g, az_g;         // accel values in gs
 float a_mag = 0;                // accel mag
 float a_abs = 0;                // absolute accel sans gravity (in gs)
-double accel_alpha = 3;         // alpha value to smooth out accel //was 0.6
+double accel_alpha = 0.25;      // alpha value to smooth out accel //was 0.6
 float accel_filt = 0;           // accel filtered
 float noise = 0;                // system noise
 float accel_filt_mod = 0;       // accel filt modified for easier peak detection
@@ -39,8 +40,10 @@ uint32_t p_t1 = 0, p_t2 = 0;    // peak time 1 and 2
 float delta = 0, freq = 0;
 bool peak = true;
 uint64_t ind = 0;
+uint32_t now_ms = 0;
 
-lp_filt_output_t sig1, sig2, sig3, sig4;
+lp_filt_output_t sig1,
+    sig2, sig3, sig4;
 
 // accel sample
 accel_samples_t accel_sample;
@@ -49,6 +52,9 @@ peak_det_params_t pdp;
 // flags---------------------------------------------------
 bool isAbove = false;   // is the accel signal above p_threshold
 bool initDecay = false; // has the rep decay countdown started
+
+// new stopwatch object
+stopwatch_obj p_interval_obj;
 
 void app_main()
 {
@@ -64,13 +70,15 @@ void app_main()
     BMI160_config(&bmiconfig);
     MAX30102_config(&maxconfig);
 
-    // accel struct setup
-    // accel_samples samples;
-
     while (1)
     {
+        //--------------------------------------------
+        //                  TIMER
+        //--------------------------------------------
+
         // simple timer
-        uint32_t now_ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
+
+        //--------------------------------------------
 
         if (startup_samples > 0)
         {
@@ -82,45 +90,41 @@ void app_main()
         // READING ACCEL VALUES
         read_accel(&accel_sample);
 
-        // // reading from uart (debugging only)
-        char ch[6];
-        int len = uart_read_bytes(UART_NUM_0, &ch, 5, 0); // timeout = 0, non-blocking
-        if (len > 0)
-        {
-            ch[len] = '\0';
-            float value = strtof(ch, NULL);
-            accel_alpha = value;
-        }
+        // // // reading from uart (debugging only)
+        // char ch[6];
+        // int len = uart_read_bytes(UART_NUM_0, &ch, 5, 0); // timeout = 0, non-blocking
+        // if (len > 0)
+        // {
+        //     ch[len] = '\0';
+        //     float value = strtof(ch, NULL);
+        //     accel_alpha = value;
+        // }
 
         // // Seperate noise from motion
         lowpass_filter(&accel_filt_out, accel_alpha, accel_sample.a_abs);
-        lowpass_filter(&sig1, 0.2, accel_sample.a_abs);
-        lowpass_filter(&sig2, 0.6, accel_sample.a_abs);
-
         // rep detection formula R = P-1/2
 
-        // env_creation_irsf(&p_env, accel_filt_mod, p_alpha_release);
+        env_creation_irsf(&p_env, accel_filt_out.sig_filt, p_alpha_release);
 
         // // threshold (95% of the envelope)
-        // p_threshold = p_env * .95;
+        p_threshold = p_env * .95;
 
-        // peak_detection(accel_filt_mod, p_threshold, now_ms, &pdp);
+        peak_detection(accel_filt_out.sig_filt, p_threshold, &pdp);
 
         // debuging purposes
         // printf(">cutoff:%f\n", cutoff);
         // printf(">a_mag:%f\n", accel_sample.a_mag);
         // printf(">a_abs:%f\n", accel_sample.a_abs);
         printf(">sig_filt:%f\n", accel_filt_out.sig_filt);
-        printf(">sig1:%f\n", sig1.sig_filt);
-        printf(">sig2:%f\n", sig2.sig_filt);
+        printf(">p_threshold:%f\n", p_threshold);
+        printf(">interval:%f\n", pdp.p_interval_s);
+        printf(">p_flag:%d\n", pdp.peakFlag);
 
         // printf(">accel_filt_mod:%f\n", accel_filt_mod);
-
         // printf(">noise:%f\n", noise);
         // printf(">alpha:%f\n", accel_alpha);
-        // printf(">p_env:%f\n", p_env);
+        printf(">p_env:%f\n", p_env);
         // printf(">p_alpha_release:%f\n", p_alpha_release);
-        // printf(">p_threshold:%f\n", p_threshold);
         // printf(">p_count:%d\n", pdp.p_count);
         // printf(">rep_count:%f\n", pdp.rep_count);
         // printf(">p_count:%d\n", pdp.p_count);
