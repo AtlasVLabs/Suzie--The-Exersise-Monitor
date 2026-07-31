@@ -41,6 +41,11 @@ void env_creation_irsf(float *env, float sig, float fall_alpha)
 
 void peak_detection(float sig, float p_threshold, peak_det_params_t *params)
 {
+    if (sig > 0.1)
+        params->interval_effort += sig;
+    else
+        params->interval_effort = 0;
+
     // does the signal pass a threshold to not be noise?
     if (sig > ACCEL_SIG_MOD_MIN)
     {
@@ -61,6 +66,10 @@ void peak_detection(float sig, float p_threshold, peak_det_params_t *params)
                 params->p_interval_s =
                     interval_us / 1000000.0f;
             }
+
+            // effort/second
+            params->effort_s = (1 / params->p_interval_s) * params->interval_effort;
+            params->interval_effort = 0;
         }
     }
     else

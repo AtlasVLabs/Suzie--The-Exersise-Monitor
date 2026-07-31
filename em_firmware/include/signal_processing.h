@@ -19,6 +19,8 @@ typedef struct
     float p_interval_s;
     int p_count;
     bool peakFlag;
+    float interval_effort;
+    float effort_s;
 } peak_det_params_t;
 
 void ema_machine(float, float, float *);

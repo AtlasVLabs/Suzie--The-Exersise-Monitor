@@ -112,6 +112,8 @@ void app_main()
         printf(">p_threshold:%f\n", p_threshold);
         printf(">interval:%f\n", pdp.p_interval_s);
         printf(">p_flag:%d\n", pdp.peakFlag);
+        printf(">effort:%f\n", pdp.interval_effort);
+        printf(">effort/s:%f\n", pdp.effort_s);
 
         // printf(">accel_filt_mod:%f\n", accel_filt_mod);
         // printf(">noise:%f\n", noise);
