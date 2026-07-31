@@ -49,6 +49,7 @@ void stopwatch_start(stopwatch_obj *stopwatch)
     // populate the stopwatch
     stopwatch->active = true;
     stopwatch->start_time_us = esp_timer_get_time();
+    stopwatch->duration_us = 0;
 }
 
 void stopwatch_update(stopwatch_obj *stopwatch)
@@ -88,9 +89,9 @@ bool stopwatch_lap(stopwatch_obj *obj, int64_t *interval_us)
 
     // Later peaks: measure and restart.
     stopwatch_update(obj);
+    *interval_us = obj->duration_us;
+    stopwatch_end(obj);
     stopwatch_start(obj);
 
-    *interval_us = obj->duration_us;
-
-    return true;
+       return true;
 }

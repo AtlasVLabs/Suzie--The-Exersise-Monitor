@@ -23,7 +23,7 @@ short ax, ay, az;               // raw accel values
 float ax_g, ay_g, az_g;         // accel values in gs
 float a_mag = 0;                // accel mag
 float a_abs = 0;                // absolute accel sans gravity (in gs)
-double accel_alpha = 0.25;      // alpha value to smooth out accel //was 0.6
+double accel_alpha = 0.08;      // alpha value to smooth out accel //was 0.6
 float accel_filt = 0;           // accel filtered
 float noise = 0;                // system noise
 float accel_filt_mod = 0;       // accel filt modified for easier peak detection
@@ -32,7 +32,7 @@ float rep_count = 0;            // rep count
 int startup_samples = 20;       // samples to ignore during startup
 float p_env = 0;                // peak envelope
 float p_threshold = 0;          // peak threshold
-float p_alpha_release = .25;    // alpha for the peak envelope. Slow decent after peak in signal
+float p_alpha_release = .04;    // alpha for the peak envelope. Slow decent after peak in signal
 float cutoff = 0.12f;           // clamp for our accel signal
 float rep_decay_start_time = 0; // countdown for our rep decay
 float effort_avg = 0;           // an estimation of the effort put in by the user
@@ -72,13 +72,6 @@ void app_main()
 
     while (1)
     {
-        //--------------------------------------------
-        //                  TIMER
-        //--------------------------------------------
-
-        // simple timer
-
-        //--------------------------------------------
 
         if (startup_samples > 0)
         {

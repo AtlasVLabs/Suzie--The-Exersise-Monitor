@@ -3,7 +3,7 @@
 #include "math.h"
 #include "timers.h"
 #define REP_DECAY_MS 6700 // 6.7 SECOND
-#define ACCEL_SIG_MOD_MIN 0.8f
+#define ACCEL_SIG_MOD_MIN 0.35f
 //----------------------------
 
 typedef struct
