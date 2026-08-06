@@ -1,0 +1,17 @@
+C:\Users\User\Documents\GitHub\Exercise_monitor\em_software\Susie\Susie\bin\Debug\net10.0-windows\Susie.exe
+C:\Users\User\Documents\GitHub\Exercise_monitor\em_software\Susie\Susie\bin\Debug\net10.0-windows\Susie.deps.json
+C:\Users\User\Documents\GitHub\Exercise_monitor\em_software\Susie\Susie\bin\Debug\net10.0-windows\Susie.runtimeconfig.json
+C:\Users\User\Documents\GitHub\Exercise_monitor\em_software\Susie\Susie\bin\Debug\net10.0-windows\Susie.dll
+C:\Users\User\Documents\GitHub\Exercise_monitor\em_software\Susie\Susie\bin\Debug\net10.0-windows\Susie.pdb
+C:\Users\User\Documents\GitHub\Exercise_monitor\em_software\Susie\Susie\obj\Debug\net10.0-windows\Susie.Susie.resources
+C:\Users\User\Documents\GitHub\Exercise_monitor\em_software\Susie\Susie\obj\Debug\net10.0-windows\Susie.csproj.GenerateResource.cache
+C:\Users\User\Documents\GitHub\Exercise_monitor\em_software\Susie\Susie\obj\Debug\net10.0-windows\Susie.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\User\Documents\GitHub\Exercise_monitor\em_software\Susie\Susie\obj\Debug\net10.0-windows\Susie.AssemblyInfoInputs.cache
+C:\Users\User\Documents\GitHub\Exercise_monitor\em_software\Susie\Susie\obj\Debug\net10.0-windows\Susie.AssemblyInfo.cs
+C:\Users\User\Documents\GitHub\Exercise_monitor\em_software\Susie\Susie\obj\Debug\net10.0-windows\Susie.csproj.CoreCompileInputs.cache
+C:\Users\User\Documents\GitHub\Exercise_monitor\em_software\Susie\Susie\obj\Debug\net10.0-windows\Susie.sourcelink.json
+C:\Users\User\Documents\GitHub\Exercise_monitor\em_software\Susie\Susie\obj\Debug\net10.0-windows\Susie.dll
+C:\Users\User\Documents\GitHub\Exercise_monitor\em_software\Susie\Susie\obj\Debug\net10.0-windows\refint\Susie.dll
+C:\Users\User\Documents\GitHub\Exercise_monitor\em_software\Susie\Susie\obj\Debug\net10.0-windows\Susie.pdb
+C:\Users\User\Documents\GitHub\Exercise_monitor\em_software\Susie\Susie\obj\Debug\net10.0-windows\Susie.genruntimeconfig.cache
+C:\Users\User\Documents\GitHub\Exercise_monitor\em_software\Susie\Susie\obj\Debug\net10.0-windows\ref\Susie.dll
