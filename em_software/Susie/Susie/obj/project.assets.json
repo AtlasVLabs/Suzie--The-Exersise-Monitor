@@ -1,11 +1,84 @@
 {
   "version": 3,
   "targets": {
-    "net10.0-windows7.0": {}
+    "net10.0-windows7.0": {
+      "Plugin.BLE/3.2.1": {
+        "type": "package",
+        "compile": {
+          "lib/netstandard2.0/Plugin.BLE.dll": {
+            "related": ".pdb;.xml"
+          }
+        },
+        "runtime": {
+          "lib/netstandard2.0/Plugin.BLE.dll": {
+            "related": ".pdb;.xml"
+          }
+        }
+      }
+    }
   },
-  "libraries": {},
+  "libraries": {
+    "Plugin.BLE/3.2.1": {
+      "sha512": "76XxEHkmbKAsAEHGZC/U70nzXyaRLwG/tbFLRuvg/l+k8xVsPIeQj1AptwIrPKA/TVNTEvUeTw1kmNu11vOZyA==",
+      "type": "package",
+      "path": "plugin.ble/3.2.1",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "README.md",
+        "icon_small.png",
+        "lib/monoandroid13.0/Plugin.BLE.dll",
+        "lib/monoandroid13.0/Plugin.BLE.pdb",
+        "lib/monoandroid13.0/Plugin.BLE.xml",
+        "lib/net8.0-android34.0/Plugin.BLE.dll",
+        "lib/net8.0-android34.0/Plugin.BLE.pdb",
+        "lib/net8.0-android34.0/Plugin.BLE.xml",
+        "lib/net8.0-ios18.0/Plugin.BLE.dll",
+        "lib/net8.0-ios18.0/Plugin.BLE.pdb",
+        "lib/net8.0-ios18.0/Plugin.BLE.xml",
+        "lib/net8.0-maccatalyst18.0/Plugin.BLE.dll",
+        "lib/net8.0-maccatalyst18.0/Plugin.BLE.pdb",
+        "lib/net8.0-maccatalyst18.0/Plugin.BLE.xml",
+        "lib/net8.0-windows10.0.19041/Plugin.BLE.dll",
+        "lib/net8.0-windows10.0.19041/Plugin.BLE.pdb",
+        "lib/net8.0-windows10.0.19041/Plugin.BLE.xml",
+        "lib/net8.0-windows10.0.22000/Plugin.BLE.dll",
+        "lib/net8.0-windows10.0.22000/Plugin.BLE.pdb",
+        "lib/net8.0-windows10.0.22000/Plugin.BLE.xml",
+        "lib/net9.0-android35.0/Plugin.BLE.dll",
+        "lib/net9.0-android35.0/Plugin.BLE.pdb",
+        "lib/net9.0-android35.0/Plugin.BLE.xml",
+        "lib/net9.0-ios18.0/Plugin.BLE.dll",
+        "lib/net9.0-ios18.0/Plugin.BLE.pdb",
+        "lib/net9.0-ios18.0/Plugin.BLE.xml",
+        "lib/net9.0-maccatalyst18.0/Plugin.BLE.dll",
+        "lib/net9.0-maccatalyst18.0/Plugin.BLE.pdb",
+        "lib/net9.0-maccatalyst18.0/Plugin.BLE.xml",
+        "lib/net9.0-windows10.0.19041/Plugin.BLE.dll",
+        "lib/net9.0-windows10.0.19041/Plugin.BLE.pdb",
+        "lib/net9.0-windows10.0.19041/Plugin.BLE.xml",
+        "lib/netstandard2.0/Plugin.BLE.dll",
+        "lib/netstandard2.0/Plugin.BLE.pdb",
+        "lib/netstandard2.0/Plugin.BLE.xml",
+        "lib/uap10.0.17763/Plugin.BLE.dll",
+        "lib/uap10.0.17763/Plugin.BLE.pdb",
+        "lib/uap10.0.17763/Plugin.BLE.pri",
+        "lib/uap10.0.17763/Plugin.BLE.xml",
+        "lib/xamarinios10/Plugin.BLE.dll",
+        "lib/xamarinios10/Plugin.BLE.pdb",
+        "lib/xamarinios10/Plugin.BLE.xml",
+        "lib/xamarinmac20/Plugin.BLE.dll",
+        "lib/xamarinmac20/Plugin.BLE.pdb",
+        "lib/xamarinmac20/Plugin.BLE.xml",
+        "plugin.ble.3.2.1.nupkg.sha512",
+        "plugin.ble.nuspec"
+      ]
+    }
+  },
   "projectFileDependencyGroups": {
-    "net10.0-windows7.0": []
+    "net10.0-windows7.0": [
+      "Plugin.BLE >= 3.2.1"
+    ]
   },
   "packageFolders": {
     "C:\\Users\\User\\.nuget\\packages\\": {},
@@ -56,6 +129,12 @@
     "frameworks": {
       "net10.0-windows7.0": {
         "targetAlias": "net10.0-windows",
+        "dependencies": {
+          "Plugin.BLE": {
+            "target": "Package",
+            "version": "[3.2.1, )"
+          }
+        },
         "imports": [
           "net461",
           "net462",

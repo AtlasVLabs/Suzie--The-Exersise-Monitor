@@ -8,4 +8,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Plugin.BLE" Version="3.2.1" />
+  </ItemGroup>
+
 </Project>

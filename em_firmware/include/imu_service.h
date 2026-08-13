@@ -13,5 +13,15 @@ typedef struct read_accel_struct
 
 } accel_samples_t;
 
+typedef struct read_gyro_struct
+{
+    int16_t gx, gy, gz;
+    float gx_dps, gy_dps, gz_dps;
+    float g_mag; // gyro mag
+
+} gyro_samples_t;
+
 // read accel values
 void read_accel(accel_samples_t *sample);
+// read gyro values
+void read_gyro(gyro_samples_t *sample);

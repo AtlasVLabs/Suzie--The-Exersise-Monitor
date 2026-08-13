@@ -60,11 +60,17 @@ esp_err_t BMI160_config(const bmi160_config_t *config)
         BMI160_set_accel_pwr_mode(config->apm),
         TAG,
         "failed to set accel power mode");
+        
+    // Let the accelerometer command finish
+    vTaskDelay(pdMS_TO_TICKS(10));
 
     ESP_RETURN_ON_ERROR(
         BMI160_set_gyro_pwr_mode(config->gpm),
         TAG,
         "failed to set gyro power mode");
+
+    // delay for gyro
+    vTaskDelay(pdMS_TO_TICKS(80));
 
     // accel and gyro configs
     ESP_RETURN_ON_ERROR(
