@@ -4,8 +4,8 @@
 #include "esp_err.h"
 
 // data and clock pins
-#define I2C_SDA_PIN 21
-#define I2C_SCL_PIN 22
+#define I2C_SDA_PIN 5
+#define I2C_SCL_PIN 6
 
 esp_err_t i2c_bus_init(void);
 i2c_master_bus_handle_t get_master_bus_handle(void);

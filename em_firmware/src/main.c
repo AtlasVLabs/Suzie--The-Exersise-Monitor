@@ -1,4 +1,5 @@
 #include "driver/i2c_master.h"
+#include "driver/gpio.h"
 #include "driver/uart.h"
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
@@ -9,6 +10,8 @@
 #include "imu_service.h"
 #include "signal_processing.h"
 #include "timers.h"
+
+#define USER_LED GPIO_NUM_21
 
 // variables---------------------------------------------
 float accel_alpha = 0.08;    // alpha value to smooth out accel //was 0.6
@@ -26,16 +29,34 @@ peak_det_params_t pdp = {0};
 void app_main()
 {
     // inits-------------------------------------------------
-    // uart_driver_install(UART_NUM_0, 1024, 0, 0, NULL, 0);
+
+    gpio_config_t led_config = {
+        .pin_bit_mask = 1ULL << USER_LED,
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE};
+    gpio_config(&led_config);
+
+    gpio_set_level(USER_LED, 0);
+
+    vTaskDelay(pdMS_TO_TICKS(5000));
+
+    printf("here 1\n");
+    fflush(stdout);
     i2c_bus_init();
-    MAX30102_init(get_master_bus_handle());
+    // MAX30102_init(get_master_bus_handle());
+    printf("here 2\n");
+    fflush(stdout);
+
     BMI160_init(get_master_bus_handle());
-    max30102_config_t maxconfig = MAX30102_CONFIG_DEFAULT();
     bmi160_config_t bmiconfig = {
         .apm = bmi160_accel_pwr_normal,
         .gpm = bmi160_gyro_pwr_normal};
     BMI160_config(&bmiconfig);
     // MAX30102_config(&maxconfig);
+    printf("here 3\n");
+    fflush(stdout);
 
     while (1)
     {
@@ -71,11 +92,6 @@ void app_main()
         peak_detection(accel_filt_out.sig_filt, p_threshold, &pdp);
 
         // reps
-        // uint8_t pmu_status = 0;
-        // BMI160_read_bytes(0x03, &pmu_status, 1);
-        // printf("PMU_STATUS: 0x%02X\n", pmu_status);
-        // printf("Gyro power bits: %u\n",
-        //        (unsigned)((pmu_status >> 2) & 0x03));
 
         // debuging purposes
         printf(">sig_filt:%f\n", accel_filt_out.sig_filt);
@@ -84,12 +100,51 @@ void app_main()
         // printf(">p_flag:%d\n", pdp.peakFlag);
         // printf(">effort:%f\n", pdp.interval_effort);
         // printf(">effort/s:%f\n", pdp.effort_s);
-        // printf(">p_env:%f\n", p_env);
+        // printf("here 1");
 
         printf(">gx:%f\n", gyro_sample.gx_dps);
         printf(">gy:%f\n", gyro_sample.gy_dps);
         printf(">gz:%f\n", gyro_sample.gz_dps);
 
+        printf("here 4\n");
+        fflush(stdout);
+
         vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
+
+// #include "driver/gpio.h"
+// #include "freertos/FreeRTOS.h"
+// #include "freertos/task.h"
+// #include "esp_log.h"
+
+// #define USER_LED GPIO_NUM_21
+
+// static const char *TAG = "TEST";
+// void app_main(void)
+// {
+//     gpio_config_t led_config = {
+//         .pin_bit_mask = 1ULL << USER_LED,
+//         .mode = GPIO_MODE_OUTPUT,
+//         .pull_up_en = GPIO_PULLUP_DISABLE,
+//         .pull_down_en = GPIO_PULLDOWN_DISABLE,
+//         .intr_type = GPIO_INTR_DISABLE};
+
+//     gpio_config(&led_config);
+
+//     while (true)
+//     {
+//         gpio_set_level(USER_LED, 0); // ON: active-low
+//         vTaskDelay(pdMS_TO_TICKS(1000));
+
+//         gpio_set_level(USER_LED, 1); // OFF
+//         vTaskDelay(pdMS_TO_TICKS(1000));
+
+//         // printf("printf test\n");
+//         // fflush(stdout);
+
+//         // ESP_LOGI(TAG, "ESP_LOGI test");
+
+//         printf("hiya dude\n");
+//     }
+// }
