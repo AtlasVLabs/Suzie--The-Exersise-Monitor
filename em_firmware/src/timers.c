@@ -13,7 +13,7 @@ void alarm_start(alarm_obj *alarm, int64_t delay_us, timer_callback_t callback)
 
 void alarm_update(alarm_obj *alarm)
 {
-    if (!alarm || alarm->active == true)
+    if (!alarm || alarm->active == false)
         return;
 
     int64_t now_us = esp_timer_get_time();
@@ -21,6 +21,7 @@ void alarm_update(alarm_obj *alarm)
     if (now_us >= alarm->deadline_us)
     {
         timer_callback_t callback = alarm->callback;
+        alarm->active = false;
 
         if (callback != NULL)
             callback();
@@ -52,14 +53,7 @@ void stopwatch_start(stopwatch_obj *stopwatch)
     stopwatch->duration_us = 0;
 }
 
-void stopwatch_update(stopwatch_obj *stopwatch)
-{
-    if (!stopwatch || stopwatch->active == false)
-        return;
-    stopwatch->duration_us = esp_timer_get_time() - stopwatch->start_time_us;
-}
-
-int16_t stopwatch_end(stopwatch_obj *stopwatch)
+int64_t stopwatch_end(stopwatch_obj *stopwatch)
 {
     int64_t duration;
     if (!stopwatch || stopwatch->active == false)
@@ -69,29 +63,33 @@ int16_t stopwatch_end(stopwatch_obj *stopwatch)
     return duration;
 }
 
-int64_t stopwatch_elapsed(const stopwatch_obj *stopwatch)
+int64_t stopwatch_elapsed(stopwatch_obj *stopwatch)
 {
     if (!stopwatch || stopwatch->active == false)
         return -1;
+    stopwatch->duration_us = esp_timer_get_time() - stopwatch->start_time_us;
     return stopwatch->duration_us;
 }
 
 bool stopwatch_lap(stopwatch_obj *obj, int64_t *interval_us)
 {
+    if (!obj || !interval_us)
+        return false;
+
     int64_t now_us = esp_timer_get_time();
 
-    // First peak: begin timing.
     if (!obj->active)
     {
-        stopwatch_start(obj);
+        obj->active = true;
+        obj->start_time_us = now_us;
+        obj->duration_us = 0;
         return false;
     }
 
-    // Later peaks: measure and restart.
-    stopwatch_update(obj);
-    *interval_us = obj->duration_us;
-    stopwatch_end(obj);
-    stopwatch_start(obj);
+    *interval_us = now_us - obj->start_time_us;
 
-       return true;
+    obj->start_time_us = now_us;
+    obj->duration_us = *interval_us;
+
+    return true;
 }

@@ -20,7 +20,11 @@ typedef struct
     int p_count;
     bool peakFlag;
     float interval_effort;
+    float average_intensity;
     float effort_s;
+
+    float interval_signal_sum; // currently accumulating
+    bool interval_complete;    // new result is available
 } peak_det_params_t;
 
 void ema_machine(float, float, float *);

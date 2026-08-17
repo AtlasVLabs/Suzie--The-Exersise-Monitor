@@ -45,18 +45,14 @@ bool alarm_is_active(const alarm_obj *alarm);
 /// @param start_time_us when the event started
 void stopwatch_start(stopwatch_obj *stopwatch);
 
-/// @brief update the duration counter
-/// @param stopwatch a stopwatch object
-void stopwatch_update(stopwatch_obj *stopwatch);
-
 /// @brief Ends the specified stopwatch event
 /// @param stopwatch a stopwatch object
 /// @return elapsed time of the event
-int16_t stopwatch_end(stopwatch_obj *stopwatch);
+int64_t stopwatch_end(stopwatch_obj *stopwatch);
 
-/// @brief Returns the elapsed time without affecting the stopwatch event
+/// @brief Returns the elapsed time
 /// @param stopwatch a stopwatch object
 /// @return elapsed time of the event
-int64_t stopwatch_elapsed(const stopwatch_obj *stopwatch);
+int64_t stopwatch_elapsed(stopwatch_obj *stopwatch);
 
 bool stopwatch_lap(stopwatch_obj *obj, int64_t *interval_us);

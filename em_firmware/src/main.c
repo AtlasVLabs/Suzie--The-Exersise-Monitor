@@ -21,10 +21,13 @@ float p_env = 0;             // peak envelope
 float p_threshold = 0;       // peak threshold
 float p_alpha_release = .04; // alpha for the peak envelope. Slow decent after peak in signal
 
+float gx_angle, gy_angle, gz_angle;
+
 accel_samples_t accel_sample = {0};
 gyro_samples_t gyro_sample = {0};
 lp_filt_output_t accel_filt_out = {0};
 peak_det_params_t pdp = {0};
+stopwatch_obj sample_watch = {0};
 
 void app_main()
 {
@@ -42,7 +45,6 @@ void app_main()
 
     vTaskDelay(pdMS_TO_TICKS(5000));
 
-    printf("here 1\n");
     fflush(stdout);
     i2c_bus_init();
     // MAX30102_init(get_master_bus_handle());
@@ -55,7 +57,7 @@ void app_main()
         .gpm = bmi160_gyro_pwr_normal};
     BMI160_config(&bmiconfig);
     // MAX30102_config(&maxconfig);
-    printf("here 3\n");
+
     fflush(stdout);
 
     while (1)
@@ -73,16 +75,37 @@ void app_main()
         // Reading gyro values
         read_gyro(&gyro_sample);
 
+        int64_t sample_interval_us;
+        bool valid_dt =
+            stopwatch_lap(&sample_watch, &sample_interval_us);
         //-------------------------------------------------------------
         // Gyro stuff
         //-------------------------------------------------------------
 
         // remove the bias (hardcoded)
-        //  float gx_corrected = gyro_sample.gx_dps
+        float gx_corrected = gyro_sample.gx_dps - 0.68f;
+        float gy_corrected = gyro_sample.gy_dps - 0.03f;
+        float gz_corrected = gyro_sample.gz_dps - (-0.13f);
 
         // // Seperate noise from motion
         lowpass_filter(&accel_filt_out, accel_alpha, accel_sample.a_abs);
         // rep detection formula R = P-1/2
+
+        // integration
+        if (valid_dt)
+        {
+            float dt_s = sample_interval_us / 1000000.0f;
+
+            if (dt_s > 0.0f && dt_s < 0.1f)
+            {
+                pdp.interval_effort +=
+                    accel_filt_out.sig_filt * dt_s;
+
+                gx_angle += gx_corrected * dt_s;
+                gy_angle += gy_corrected * dt_s;
+                gz_angle += gz_corrected * dt_s;
+            }
+        }
 
         env_creation_irsf(&p_env, accel_filt_out.sig_filt, p_alpha_release);
 
@@ -90,6 +113,16 @@ void app_main()
         p_threshold = p_env * .95;
 
         peak_detection(accel_filt_out.sig_filt, p_threshold, &pdp);
+
+        if (pdp.interval_complete)
+        {
+
+            if (pdp.p_interval_s > 0.0f)
+            {
+                pdp.average_intensity =
+                    pdp.interval_effort / pdp.p_interval_s;
+            }
+        }
 
         // reps
 
@@ -102,49 +135,12 @@ void app_main()
         // printf(">effort/s:%f\n", pdp.effort_s);
         // printf("here 1");
 
-        printf(">gx:%f\n", gyro_sample.gx_dps);
-        printf(">gy:%f\n", gyro_sample.gy_dps);
-        printf(">gz:%f\n", gyro_sample.gz_dps);
+        printf(">gx:%f\n", gx_corrected);
+        printf(">gy:%f\n", gy_corrected);
+        printf(">gz:%f\n", gz_corrected);
 
-        printf("here 4\n");
         fflush(stdout);
 
         vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
-
-// #include "driver/gpio.h"
-// #include "freertos/FreeRTOS.h"
-// #include "freertos/task.h"
-// #include "esp_log.h"
-
-// #define USER_LED GPIO_NUM_21
-
-// static const char *TAG = "TEST";
-// void app_main(void)
-// {
-//     gpio_config_t led_config = {
-//         .pin_bit_mask = 1ULL << USER_LED,
-//         .mode = GPIO_MODE_OUTPUT,
-//         .pull_up_en = GPIO_PULLUP_DISABLE,
-//         .pull_down_en = GPIO_PULLDOWN_DISABLE,
-//         .intr_type = GPIO_INTR_DISABLE};
-
-//     gpio_config(&led_config);
-
-//     while (true)
-//     {
-//         gpio_set_level(USER_LED, 0); // ON: active-low
-//         vTaskDelay(pdMS_TO_TICKS(1000));
-
-//         gpio_set_level(USER_LED, 1); // OFF
-//         vTaskDelay(pdMS_TO_TICKS(1000));
-
-//         // printf("printf test\n");
-//         // fflush(stdout);
-
-//         // ESP_LOGI(TAG, "ESP_LOGI test");
-
-//         printf("hiya dude\n");
-//     }
-// }

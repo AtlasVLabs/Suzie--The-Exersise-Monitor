@@ -41,39 +41,41 @@ void env_creation_irsf(float *env, float sig, float fall_alpha)
 
 void peak_detection(float sig, float p_threshold, peak_det_params_t *params)
 {
-    if (sig > 0.1)
-        params->interval_effort += sig;
+    params->interval_complete = false;
+
+    if (sig > 0.1f)
+        params->interval_signal_sum += sig;
     else
-        params->interval_effort = 0;
+        params->interval_signal_sum = 0.0f;
 
     // does the signal pass a threshold to not be noise?
-    if (sig > ACCEL_SIG_MOD_MIN)
-    {
-        if (sig > p_threshold)
-        {
-            params->isAbove = true;
-        }
-        if (params->isAbove && sig <= p_threshold)
-        {
-            params->p_count++;
-            params->peakFlag = !params->peakFlag;
-            params->isAbove = false;
-
-            int64_t interval_us;
-
-            if (stopwatch_lap(&params->s_obj, &interval_us))
-            {
-                params->p_interval_s =
-                    interval_us / 1000000.0f;
-            }
-
-            // effort/second
-            params->effort_s = (1 / params->p_interval_s) * params->interval_effort;
-            params->interval_effort = 0;
-        }
-    }
-    else
+    if (sig <= ACCEL_SIG_MOD_MIN)
     {
         params->isAbove = false;
+        return;
+    }
+
+    if (sig > p_threshold)
+    {
+        params->isAbove = true;
+    }
+    if (params->isAbove && sig <= p_threshold)
+    {
+        params->p_count++;
+        params->peakFlag = !params->peakFlag;
+        params->isAbove = false;
+
+        int64_t interval_us;
+
+        // returns true at the end of an interval
+        if (stopwatch_lap(&params->s_obj, &interval_us))
+        {
+            params->p_interval_s =
+                interval_us / 1000000.0f;
+
+            params->interval_complete = true;
+        }
+
+        params->interval_signal_sum = 0;
     }
 }
