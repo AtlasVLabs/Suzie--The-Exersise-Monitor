@@ -2,8 +2,13 @@
 #include <stdbool.h>
 #include "math.h"
 #include "timers.h"
-#define REP_DECAY_MS 6700 // 6.7 SECOND
-#define ACCEL_SIG_MOD_MIN 0.35f
+
+#define NOISE_THRESHOLD 0.35f
+#define CD_THRESHOLD_UPPER 2
+#define CD_THRESHOLD_LOWER -2
+
+//----------------------------
+// float gyro_alpha = 0.6f; //an agressive filter for the gyroscope
 //----------------------------
 
 typedef struct
@@ -15,24 +20,32 @@ typedef struct
 typedef struct
 {
     bool isAbove;
-    stopwatch_obj s_obj;
     float p_interval_s;
     int p_count;
     bool peakFlag;
-    float interval_effort;
-    float average_intensity;
-    float effort_s;
 
-    float interval_signal_sum; // currently accumulating
-    bool interval_complete;    // new result is available
+    bool interval_complete; // new result is available
 } peak_det_params_t;
+
+typedef enum
+{
+    neutral,
+    positive,
+    negative
+} cycle_sig_direction;
+
+
+
+// lp_filt_output_t gx_filt = {0};
+// lp_filt_output_t gy_filt = {0};
+// lp_filt_output_t gz_filt = {0};
 
 void ema_machine(float, float, float *);
 
-void lowpass_filter(lp_filt_output_t *, float, float);
+void lowpass_filter(lp_filt_output_t *lpo, float alpha, float sig_source);
 
 void accel_signal_mod(float *, float, float);
 
 void env_creation_irsf(float *, float, float);
 
-void peak_detection(float, float, peak_det_params_t *);
+bool cycle_detection(float sig);

@@ -22,10 +22,19 @@ float p_threshold = 0;       // peak threshold
 float p_alpha_release = .04; // alpha for the peak envelope. Slow decent after peak in signal
 
 float gx_angle, gy_angle, gz_angle;
+float accel_signal_sum = 0;
+
+float intervalCount = 0;
 
 accel_samples_t accel_sample = {0};
 gyro_samples_t gyro_sample = {0};
+
 lp_filt_output_t accel_filt_out = {0};
+
+lp_filt_output_t gyro_x_filt_out = {0};
+lp_filt_output_t gyro_y_filt_out = {0};
+lp_filt_output_t gyro_z_filt_out = {0};
+
 peak_det_params_t pdp = {0};
 stopwatch_obj sample_watch = {0};
 
@@ -75,9 +84,10 @@ void app_main()
         // Reading gyro values
         read_gyro(&gyro_sample);
 
-        int64_t sample_interval_us;
-        bool valid_dt =
-            stopwatch_lap(&sample_watch, &sample_interval_us);
+        // // timer for each sample read
+        // int64_t sample_interval_us;
+        // bool valid_dt =
+        //     stopwatch_lap(&sample_watch, &sample_interval_us);
         //-------------------------------------------------------------
         // Gyro stuff
         //-------------------------------------------------------------
@@ -89,42 +99,58 @@ void app_main()
 
         // // Seperate noise from motion
         lowpass_filter(&accel_filt_out, accel_alpha, accel_sample.a_abs);
-        // rep detection formula R = P-1/2
 
-        // integration
-        if (valid_dt)
-        {
-            float dt_s = sample_interval_us / 1000000.0f;
+        lowpass_filter(&gyro_x_filt_out, 0.08, gx_corrected);
+        lowpass_filter(&gyro_y_filt_out, 0.1, gy_corrected);
+        lowpass_filter(&gyro_z_filt_out, 0.1, gz_corrected);
 
-            if (dt_s > 0.0f && dt_s < 0.1f)
-            {
-                pdp.interval_effort +=
-                    accel_filt_out.sig_filt * dt_s;
+        // // integration
+        // if (valid_dt)
+        // {
+        //     float dt_s = sample_interval_us / 1000000.0f;
 
-                gx_angle += gx_corrected * dt_s;
-                gy_angle += gy_corrected * dt_s;
-                gz_angle += gz_corrected * dt_s;
-            }
-        }
+        //     if (dt_s > 0.0f && dt_s < 0.1f)
+        //     {
+        //         pdp.interval_effort +=
+        //             accel_filt_out.sig_filt * dt_s;
 
-        env_creation_irsf(&p_env, accel_filt_out.sig_filt, p_alpha_release);
+        //         gx_angle += gx_corrected * dt_s;
+        //         gy_angle += gy_corrected * dt_s;
+        //         gz_angle += gz_corrected * dt_s;
+        //     }
+        // }
 
-        // // threshold (95% of the envelope)
-        p_threshold = p_env * .95;
+        // env_creation_irsf(&p_env, accel_filt_out.sig_filt, p_alpha_release);
 
-        peak_detection(accel_filt_out.sig_filt, p_threshold, &pdp);
+        // // // threshold (95% of the envelope)
+        // p_threshold = p_env * .95;
 
-        if (pdp.interval_complete)
-        {
+        // if (accel_filt_out.sig_filt > 0.1f)
+        //     accel_signal_sum += accel_filt_out.sig_filt;
+        // else
+        //     accel_signal_sum = 0.0f;
 
-            if (pdp.p_interval_s > 0.0f)
-            {
-                pdp.average_intensity =
-                    pdp.interval_effort / pdp.p_interval_s;
-            }
-        }
+        // if (peak_detection(accel_filt_out.sig_filt, p_threshold, &pdp))
+        // {
+        //     int64_t interval_us;
+
+        //     // returns true at the end of an interval
+        //     if (stopwatch_lap(&pdp.s_obj, &interval_us))
+        //     {
+        //         pdp.p_interval_s =
+        //             interval_us / 1000000.0f;
+
+        //         pdp.interval_complete = true;
+        //     }
+        // }
+
+        bool result = cycle_detection(gyro_x_filt_out.sig_filt / 100.0f);
 
         // reps
+        if (result)
+        {
+            intervalCount++;
+        }
 
         // debuging purposes
         printf(">sig_filt:%f\n", accel_filt_out.sig_filt);
@@ -133,11 +159,13 @@ void app_main()
         // printf(">p_flag:%d\n", pdp.peakFlag);
         // printf(">effort:%f\n", pdp.interval_effort);
         // printf(">effort/s:%f\n", pdp.effort_s);
-        // printf("here 1");
 
-        printf(">gx:%f\n", gx_corrected);
-        printf(">gy:%f\n", gy_corrected);
-        printf(">gz:%f\n", gz_corrected);
+        printf(">interval:%f\n", intervalCount);
+        printf(">gx:%f\n", gx_corrected / 100.0f);
+        printf(">counts:%f\n", (float)result);
+        // printf(">gz:%f\n", gz_corrected);
+
+        printf(">gx_filt:%f\n", gyro_x_filt_out.sig_filt / 100.0f);
 
         fflush(stdout);
 
