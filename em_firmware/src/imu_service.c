@@ -26,12 +26,17 @@ void read_gyro(gyro_samples_t *sample)
     // read accel values
     BMI160_read_gyro_raw(&sample->gx, &sample->gy, &sample->gz);
 
-    sample->gx_dps = sample->gx / 65.6f;
-    sample->gy_dps = sample->gy / 65.6f;
-    sample->gz_dps = sample->gz / 65.6f;
+    sample->gx_rad_s =
+        ((float)sample->gx / BMI160_GYRO_SCALE_2000DPS) * DEG_TO_RAD;
+
+    sample->gy_rad_s =
+        ((float)sample->gy / BMI160_GYRO_SCALE_2000DPS) * DEG_TO_RAD;
+
+    sample->gz_rad_s =
+        ((float)sample->gz / BMI160_GYRO_SCALE_2000DPS) * DEG_TO_RAD;
 
     sample->g_mag = sqrtf(
-        (sample->gx * sample->gx) +
-        (sample->gy * sample->gy) +
-        (sample->gz * sample->gz)); // gyro magnitude
+        (sample->gx_rad_s * sample->gx_rad_s) +
+        (sample->gy_rad_s * sample->gy_rad_s) +
+        (sample->gz_rad_s * sample->gz_rad_s)); // gyro magnitude
 }

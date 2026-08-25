@@ -60,7 +60,7 @@ esp_err_t BMI160_config(const bmi160_config_t *config)
         BMI160_set_accel_pwr_mode(config->apm),
         TAG,
         "failed to set accel power mode");
-        
+
     // Let the accelerometer command finish
     vTaskDelay(pdMS_TO_TICKS(10));
 
@@ -89,7 +89,7 @@ esp_err_t BMI160_config(const bmi160_config_t *config)
         "failed to write GYR_CONF");
 
     ESP_RETURN_ON_ERROR(
-        BMI160_write_reg(BMI160_REG_GYR_RANGE, 0x02),
+        BMI160_write_reg(BMI160_REG_GYR_RANGE, 0x00),
         TAG,
         "failed to write GYR_RANGE");
 

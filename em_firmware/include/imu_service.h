@@ -4,6 +4,9 @@
 #include "bmi160.h"
 #include "math.h"
 
+#define BMI160_GYRO_SCALE_2000DPS 16.4f
+#define DEG_TO_RAD 0.01745329252f
+
 typedef struct read_accel_struct
 {
     int16_t ax, ay, az;
@@ -16,7 +19,9 @@ typedef struct read_accel_struct
 typedef struct read_gyro_struct
 {
     int16_t gx, gy, gz;
-    float gx_dps, gy_dps, gz_dps;
+    float gx_rad_s,
+        gy_rad_s,
+        gz_rad_s;
     float g_mag; // gyro mag
 
 } gyro_samples_t;

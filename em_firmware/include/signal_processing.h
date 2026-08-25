@@ -4,8 +4,8 @@
 #include "timers.h"
 
 #define NOISE_THRESHOLD 0.35f
-#define CD_THRESHOLD_UPPER 2
-#define CD_THRESHOLD_LOWER -2
+#define CD_THRESHOLD_UPPER 4
+#define CD_THRESHOLD_LOWER -4
 
 //----------------------------
 // float gyro_alpha = 0.6f; //an agressive filter for the gyroscope
