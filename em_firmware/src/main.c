@@ -114,9 +114,12 @@ void app_main()
             {
                 interval_effort += accel_filt_out.sig_filt * dt_s;
 
-                gx_angle += gx_corrected * dt_s;
-                gy_angle += gy_corrected * dt_s;
-                gz_angle += gz_corrected * dt_s;
+                if (gx_corrected > 0.5)
+                {
+                    gx_angle += gx_corrected * dt_s;
+                    gy_angle += gy_corrected * dt_s;
+                    gz_angle += gz_corrected * dt_s;
+                }
             }
         }
 
@@ -165,7 +168,7 @@ void app_main()
         printf(">counts:%f\n", (float)result * 10);
         printf(">posThresh:%f\n", 4.0f);
         printf(">negThresh:%f\n", -4.0f);
-        // printf(">gx:%f\n", gx_angle);
+        printf(">gx_angle:%f\n", gx_angle);
 
         printf(">gx_filt:%f\n", gyro_x_filt_out.sig_filt);
 
