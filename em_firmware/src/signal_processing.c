@@ -101,7 +101,7 @@ bool peak_detection(float sig, float p_threshold, peak_det_params_t *params)
     return false; // fail-safe
 }
 
-bool cycle_detection(float sig)
+bool transition_detection(float sig)
 {
     if (sig >= CD_THRESHOLD_UPPER)
     {

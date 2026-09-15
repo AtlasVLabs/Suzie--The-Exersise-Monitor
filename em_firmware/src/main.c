@@ -12,6 +12,7 @@
 #include "timers.h"
 
 #define USER_LED GPIO_NUM_21
+#define SET_TIMEOUT_US 5000000LL
 
 // variables---------------------------------------------
 float accel_alpha = 0.08;    // alpha value to smooth out accel //was 0.6
@@ -24,8 +25,10 @@ float p_alpha_release = .04; // alpha for the peak envelope. Slow decent after p
 float gx_angle, gy_angle, gz_angle;
 float accel_signal_sum = 0;
 
-float intervalCount = 0;
+float halfCycleCount = 0;
 float interval_effort = 0;
+
+int64_t setWindow_us = 0;
 
 accel_samples_t accel_sample = {0};
 gyro_samples_t gyro_sample = {0};
@@ -37,8 +40,13 @@ lp_filt_output_t gyro_y_filt_out = {0};
 lp_filt_output_t gyro_z_filt_out = {0};
 
 peak_det_params_t pdp = {0};
-stopwatch_obj sample_watch = {0};
+stopwatch_obj sample_watch = {0}, setDuration_obj = {0};
 int64_t sample_interval_us;
+alarm_obj setAlarm_obj = {0};
+
+void test();
+
+bool setState = false;
 void app_main()
 {
     // inits-------------------------------------------------
@@ -114,7 +122,7 @@ void app_main()
             {
                 interval_effort += accel_filt_out.sig_filt * dt_s;
 
-                if (gx_corrected > 0.5)
+                if (gx_corrected > 0.5 || gx_corrected < -0.5)
                 {
                     gx_angle += gx_corrected * dt_s;
                     gy_angle += gy_corrected * dt_s;
@@ -122,6 +130,9 @@ void app_main()
                 }
             }
         }
+
+        // set detection
+        // todo: Make a set active and set inactive flag, use a timer for that too
 
         // env_creation_irsf(&p_env, accel_filt_out.sig_filt, p_alpha_release);
 
@@ -147,33 +158,62 @@ void app_main()
         //     }
         // }
 
-        bool result = cycle_detection(gx_corrected);
+        bool result = transition_detection(gx_corrected);
+
+        if (alarm_is_active(&setAlarm_obj))
+        {
+            // printf("%lld\n", (setAlarm_obj.deadline_us - esp_timer_get_time()));
+            alarm_update(&setAlarm_obj);
+            if (!alarm_is_active(&setAlarm_obj))
+            {
+                setState = false;
+            }
+        }
 
         // reps
         if (result)
         {
-            intervalCount++;
+            halfCycleCount++;
+            // start of set
+            if (!setState)
+            {
+                setState = true;
+                // start an inactivity alarm
+                if (!setAlarm_obj.active)
+                    alarm_start(&setAlarm_obj, SET_TIMEOUT_US, test);
+            }
+            // reset with each peak??
+            if (alarm_is_active(&setAlarm_obj))
+            {
+                alarm_reset(&setAlarm_obj, SET_TIMEOUT_US);
+            }
         }
 
-        // debuging purposes
-        // printf(">sig_filt:%f\n", accel_filt_out.sig_filt);
-        printf(">p_threshold:%f\n", p_threshold);
-        // printf(">interval:%f\n", pdp.p_interval_s);
-        // printf(">p_flag:%d\n", pdp.peakFlag);
-        // printf(">effort:%f\n", pdp.interval_effort);
-        // printf(">effort/s:%f\n", pdp.effort_s);
+        // // debuging purposes
+        // // printf(">sig_filt:%f\n", accel_filt_out.sig_filt);
+        // printf(">p_threshold:%f\n", p_threshold);
+        // // printf(">interval:%f\n", pdp.p_interval_s);
+        // // printf(">p_flag:%d\n", pdp.peakFlag);
+        // // printf(">effort:%f\n", pdp.interval_effort);
+        // // printf(">effort/s:%f\n", pdp.effort_s);
 
-        printf(">interval:%f\n", intervalCount);
+        printf(">cycleCount:%f\n", halfCycleCount);
         printf(">gx:%f\n", gx_corrected);
         printf(">counts:%f\n", (float)result * 10);
         printf(">posThresh:%f\n", 4.0f);
         printf(">negThresh:%f\n", -4.0f);
-        printf(">gx_angle:%f\n", gx_angle);
+        // printf(">gx_angle:%f\n", gx_angle);
 
-        printf(">gx_filt:%f\n", gyro_x_filt_out.sig_filt);
+        // printf(">gx_filt:%f\n", gyro_x_filt_out.sig_filt);
 
+        printf(">setDuratiion:%f\n", (float)(setWindow_us / 1E6));
         fflush(stdout);
 
         vTaskDelay(pdMS_TO_TICKS(10));
     }
+}
+
+void test()
+{
+    // printf("set done");
 }

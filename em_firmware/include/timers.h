@@ -31,9 +31,14 @@ void alarm_start(alarm_obj *alarm, int64_t delay, timer_callback_t callback);
 /// @param alarm an alarm object
 void alarm_update(alarm_obj *alarm);
 
+/// @brief return how much time is left till the alarm triggers
+/// @param alarm An alarm object
+/// @return time left
+int64_t alarm_timeLeft(const alarm_obj *alarm);
+
 /// @brief reset an alarm event
 /// @param alarm an alarm object
-void alarm_reset(alarm_obj *alarm);
+void alarm_reset(alarm_obj *alarm, int64_t delay_us);
 
 /// @brief checks if the alarm is running
 /// @param alarm an alarm object
@@ -54,5 +59,6 @@ int64_t stopwatch_end(stopwatch_obj *stopwatch);
 /// @param stopwatch a stopwatch object
 /// @return elapsed time of the event
 int64_t stopwatch_elapsed(stopwatch_obj *stopwatch);
+
 
 bool stopwatch_lap(stopwatch_obj *obj, int64_t *interval_us);

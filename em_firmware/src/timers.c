@@ -28,11 +28,11 @@ void alarm_update(alarm_obj *alarm)
     }
 }
 
-void alarm_reset(alarm_obj *alarm)
+void alarm_reset(alarm_obj *alarm, int64_t delay_us)
 {
     if (!alarm)
         return;
-    *alarm = (alarm_obj){0};
+    alarm->deadline_us = esp_timer_get_time() + delay_us;
 }
 
 bool alarm_is_active(const alarm_obj *alarm)
@@ -92,4 +92,11 @@ bool stopwatch_lap(stopwatch_obj *obj, int64_t *interval_us)
     obj->duration_us = *interval_us;
 
     return true;
+}
+
+int64_t alarm_timeLeft(const alarm_obj *alarm)
+{
+    if (!alarm)
+        return 0;
+    return alarm->deadline_us - esp_timer_get_time();
 }

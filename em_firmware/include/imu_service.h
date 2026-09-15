@@ -28,5 +28,5 @@ typedef struct read_gyro_struct
 
 // read accel values
 void read_accel(accel_samples_t *sample);
-// read gyro values
+// read gyro values in RADS
 void read_gyro(gyro_samples_t *sample);
