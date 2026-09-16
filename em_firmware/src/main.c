@@ -25,10 +25,10 @@ float p_alpha_release = .04; // alpha for the peak envelope. Slow decent after p
 float gx_angle, gy_angle, gz_angle;
 float accel_signal_sum = 0;
 
-float halfCycleCount = 0;
+float phaseCount = 0;
 float interval_effort = 0;
 
-int64_t setWindow_us = 0;
+int64_t setDuration_us = 0;
 
 accel_samples_t accel_sample = {0};
 gyro_samples_t gyro_sample = {0};
@@ -40,9 +40,14 @@ lp_filt_output_t gyro_y_filt_out = {0};
 lp_filt_output_t gyro_z_filt_out = {0};
 
 peak_det_params_t pdp = {0};
-stopwatch_obj sample_watch = {0}, setDuration_obj = {0};
+stopwatch_obj sample_watch = {0};
 int64_t sample_interval_us;
 alarm_obj setAlarm_obj = {0};
+
+int64_t phase_timeStamps[20];
+
+int phase_index;
+int64_t set_start_time;
 
 void test();
 
@@ -173,7 +178,18 @@ void app_main()
         // reps
         if (result)
         {
-            halfCycleCount++;
+            phaseCount++;
+            // add the timestamps of the phase to the collection
+            phase_timeStamps[phase_index++] = esp_timer_get_time();
+            if (phase_index >= 20)
+            {
+                phase_index = 0;
+                for (int i = 0; i < 20; i++)
+                {
+                    setDuration_us += phase_timeStamps[i];
+                }
+            }
+
             // start of set
             if (!setState)
             {
@@ -181,6 +197,10 @@ void app_main()
                 // start an inactivity alarm
                 if (!setAlarm_obj.active)
                     alarm_start(&setAlarm_obj, SET_TIMEOUT_US, test);
+                set_start_time = esp_timer_get_time();
+                // reset the timestamp collection on each new set
+                memset(phase_timeStamps, 0, sizeof(phase_timeStamps));
+                phase_index = 0;
             }
             // reset with each peak??
             if (alarm_is_active(&setAlarm_obj))
@@ -197,7 +217,7 @@ void app_main()
         // // printf(">effort:%f\n", pdp.interval_effort);
         // // printf(">effort/s:%f\n", pdp.effort_s);
 
-        printf(">cycleCount:%f\n", halfCycleCount);
+        printf(">cycleCount:%f\n", phaseCount);
         printf(">gx:%f\n", gx_corrected);
         printf(">counts:%f\n", (float)result * 10);
         printf(">posThresh:%f\n", 4.0f);
@@ -206,7 +226,7 @@ void app_main()
 
         // printf(">gx_filt:%f\n", gyro_x_filt_out.sig_filt);
 
-        printf(">setDuratiion:%f\n", (float)(setWindow_us / 1E6));
+        // printf(">setDuratiion:%f\n", (float)(setWindow_us / 1E6));
         fflush(stdout);
 
         vTaskDelay(pdMS_TO_TICKS(10));
