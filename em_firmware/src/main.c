@@ -71,7 +71,6 @@ void app_main()
     fflush(stdout);
     i2c_bus_init();
     // MAX30102_init(get_master_bus_handle());
-    printf("here 2\n");
     fflush(stdout);
 
     BMI160_init(get_master_bus_handle());
@@ -178,17 +177,6 @@ void app_main()
         // reps
         if (result)
         {
-            phaseCount++;
-            // add the timestamps of the phase to the collection
-            phase_timeStamps[phase_index++] = esp_timer_get_time();
-            if (phase_index >= 20)
-            {
-                phase_index = 0;
-                for (int i = 0; i < 20; i++)
-                {
-                    setDuration_us += phase_timeStamps[i];
-                }
-            }
 
             // start of set
             if (!setState)
@@ -197,6 +185,7 @@ void app_main()
                 // start an inactivity alarm
                 if (!setAlarm_obj.active)
                     alarm_start(&setAlarm_obj, SET_TIMEOUT_US, test);
+                // record the set start time at the beginning of each set
                 set_start_time = esp_timer_get_time();
                 // reset the timestamp collection on each new set
                 memset(phase_timeStamps, 0, sizeof(phase_timeStamps));
@@ -206,6 +195,25 @@ void app_main()
             if (alarm_is_active(&setAlarm_obj))
             {
                 alarm_reset(&setAlarm_obj, SET_TIMEOUT_US);
+            }
+
+            phaseCount++;
+            // add the timestamps of the phase to the collection
+            phase_timeStamps[phase_index] = esp_timer_get_time() - set_start_time;
+            // print the timestamp
+            printf("Timestamp at %d: %lld\n", phase_index, phase_timeStamps[phase_index]);
+            // increment
+            phase_index++;
+
+            if (phase_index >= 20)
+            {
+                printf("reset timestamp\n");
+                phase_index = 0;
+                for (int i = 0; i < 20; i++)
+                {
+                    setDuration_us += phase_timeStamps[i];
+                }
+                printf("Total set duration so far: %lld\n", setDuration_us);
             }
         }
 
@@ -217,11 +225,11 @@ void app_main()
         // // printf(">effort:%f\n", pdp.interval_effort);
         // // printf(">effort/s:%f\n", pdp.effort_s);
 
-        printf(">cycleCount:%f\n", phaseCount);
-        printf(">gx:%f\n", gx_corrected);
-        printf(">counts:%f\n", (float)result * 10);
-        printf(">posThresh:%f\n", 4.0f);
-        printf(">negThresh:%f\n", -4.0f);
+        // printf(">cycleCount:%f\n", phaseCount);
+        // printf(">gx:%f\n", gx_corrected);
+        // printf(">counts:%f\n", (float)result * 10);
+        // printf(">posThresh:%f\n", 4.0f);
+        // printf(">negThresh:%f\n", -4.0f);
         // printf(">gx_angle:%f\n", gx_angle);
 
         // printf(">gx_filt:%f\n", gyro_x_filt_out.sig_filt);
