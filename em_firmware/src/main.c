@@ -52,6 +52,7 @@ int64_t set_start_time;
 void test();
 
 bool setState = false;
+bool setStateTest = false; // delete later
 void app_main()
 {
     // inits-------------------------------------------------
@@ -182,6 +183,7 @@ void app_main()
             if (!setState)
             {
                 setState = true;
+                setStateTest = true;
                 // start an inactivity alarm
                 if (!setAlarm_obj.active)
                     alarm_start(&setAlarm_obj, SET_TIMEOUT_US, test);
@@ -191,7 +193,7 @@ void app_main()
                 memset(phase_timeStamps, 0, sizeof(phase_timeStamps));
                 phase_index = 0;
             }
-            // reset with each peak??
+            // reset alarm with each peak??
             if (alarm_is_active(&setAlarm_obj))
             {
                 alarm_reset(&setAlarm_obj, SET_TIMEOUT_US);
@@ -201,20 +203,24 @@ void app_main()
             // add the timestamps of the phase to the collection
             phase_timeStamps[phase_index] = esp_timer_get_time() - set_start_time;
             // print the timestamp
-            printf("Timestamp at %d: %lld\n", phase_index, phase_timeStamps[phase_index]);
-            // increment
-            phase_index++;
+            printf("Timestamp at %d: %f\n", phase_index, (float)phase_timeStamps[phase_index] / 1e6);
 
             if (phase_index >= 20)
             {
                 printf("reset timestamp\n");
+
+                // for (int i = 0; i < 20; i++)
+                // {
+                //     setDuration_us += phase_timeStamps[i];
+                // }
+                setDuration_us = phase_timeStamps[phase_index];
                 phase_index = 0;
-                for (int i = 0; i < 20; i++)
-                {
-                    setDuration_us += phase_timeStamps[i];
-                }
-                printf("Total set duration so far: %lld\n", setDuration_us);
+                setStateTest = false;
+                printf("Total set duration so far: %f\n", (float)(setDuration_us / 1e6));
             }
+            else
+                // increment
+                phase_index++;
         }
 
         // // debuging purposes
@@ -243,5 +249,12 @@ void app_main()
 
 void test()
 {
-    // printf("set done");
+    // end of a set
+    setDuration_us = phase_timeStamps[phase_index];
+    phase_index = 0;
+    setStateTest = false;
+
+    printf("set ended\n");
+    printf("Total set duration: %f\n", (float)(setDuration_us / 1e6));
+    setDuration_us = 0;
 }
