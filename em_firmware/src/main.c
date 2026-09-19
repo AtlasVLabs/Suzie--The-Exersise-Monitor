@@ -213,7 +213,7 @@ void app_main()
                 // {
                 //     setDuration_us += phase_timeStamps[i];
                 // }
-                setDuration_us = phase_timeStamps[phase_index];
+                setDuration_us += phase_timeStamps[phase_index];
                 phase_index = 0;
                 setStateTest = false;
                 printf("Total set duration so far: %f\n", (float)(setDuration_us / 1e6));
@@ -250,7 +250,7 @@ void app_main()
 void test()
 {
     // end of a set
-    setDuration_us = phase_timeStamps[phase_index];
+    setDuration_us += phase_timeStamps[phase_index - 1];
     phase_index = 0;
     setStateTest = false;
 
