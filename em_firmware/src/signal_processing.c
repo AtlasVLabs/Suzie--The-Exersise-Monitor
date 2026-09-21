@@ -2,10 +2,6 @@
 #include "timers.h"
 #include <stdio.h>
 
-float p_interval;
-cycle_sig_direction dir;
-bool beenCounted;
-
 void ema_machine(float source, float alpha, float *output)
 {
     *output = *output + alpha * (source - *output);
@@ -101,28 +97,49 @@ bool peak_detection(float sig, float p_threshold, peak_det_params_t *params)
     return false; // fail-safe
 }
 
-bool transition_detection(float sig)
+bool detect_phase_transition(float sig, phase_detection_t *params)
 {
-    if (sig >= CD_THRESHOLD_UPPER)
+    if (params == NULL)
     {
-        dir = positive;
-        if (beenCounted)
-            beenCounted = false;
+        return false;
     }
-    else if (sig <= CD_THRESHOLD_LOWER)
+
+    // We define a hysteresis limit to avoid "chattering" or bouncing near the thresholds.
+    // If the threshold to enter positive is CD_THRESHOLD_UPPER (4.0),
+    // we only return to neutral if we fall below CD_HYSTERESIS_UPPER (e.g. 1.0).
+    // If the threshold to enter negative is CD_THRESHOLD_LOWER (-4.0),
+    // we only return to neutral if we rise above CD_HYSTERESIS_LOWER (e.g. -1.0).
+    const float CD_HYSTERESIS_UPPER = 1.0f;
+    const float CD_HYSTERESIS_LOWER = -1.0f;
+
+    switch (params->state)
     {
-        dir = negative;
-        if (beenCounted)
-            beenCounted = false;
-    }
-    else
-    {
-        dir = neutral;
-        if (!beenCounted)
-        {
-            beenCounted = true;
-            return beenCounted;
-        }
+        case PHASE_STATE_NEUTRAL:
+            if (sig >= CD_THRESHOLD_UPPER)
+            {
+                params->state = PHASE_STATE_POSITIVE;
+            }
+            else if (sig <= CD_THRESHOLD_LOWER)
+            {
+                params->state = PHASE_STATE_NEGATIVE;
+            }
+            break;
+
+        case PHASE_STATE_POSITIVE:
+            if (sig <= CD_HYSTERESIS_UPPER)
+            {
+                params->state = PHASE_STATE_NEUTRAL;
+                return true; // Transition from active positive movement to neutral detected!
+            }
+            break;
+
+        case PHASE_STATE_NEGATIVE:
+            if (sig >= CD_HYSTERESIS_LOWER)
+            {
+                params->state = PHASE_STATE_NEUTRAL;
+                return true; // Transition from active negative movement to neutral detected!
+            }
+            break;
     }
 
     return false;

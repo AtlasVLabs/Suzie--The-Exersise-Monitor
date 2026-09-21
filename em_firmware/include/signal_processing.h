@@ -29,10 +29,15 @@ typedef struct
 
 typedef enum
 {
-    neutral,
-    positive,
-    negative
-} cycle_sig_direction;
+    PHASE_STATE_NEUTRAL,
+    PHASE_STATE_POSITIVE,
+    PHASE_STATE_NEGATIVE
+} phase_state_t;
+
+typedef struct
+{
+    phase_state_t state;
+} phase_detection_t;
 
 // lp_filt_output_t gx_filt = {0};
 // lp_filt_output_t gy_filt = {0};
@@ -46,4 +51,4 @@ void accel_signal_mod(float *, float, float);
 
 void env_creation_irsf(float *, float, float);
 
-bool transition_detection(float sig);
+bool detect_phase_transition(float sig, phase_detection_t *params);

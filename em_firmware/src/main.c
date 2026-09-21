@@ -40,6 +40,7 @@ lp_filt_output_t gyro_y_filt_out = {0};
 lp_filt_output_t gyro_z_filt_out = {0};
 
 peak_det_params_t pdp = {0};
+phase_detection_t phase_det = { .state = PHASE_STATE_NEUTRAL };
 stopwatch_obj sample_watch = {0};
 int64_t sample_interval_us;
 alarm_obj setAlarm_obj = {0};
@@ -163,7 +164,7 @@ void app_main()
         //     }
         // }
 
-        bool result = transition_detection(gx_corrected);
+        bool result = detect_phase_transition(gx_corrected, &phase_det);
 
         if (alarm_is_active(&setAlarm_obj))
         {
