@@ -27,6 +27,7 @@ float accel_signal_sum = 0;
 
 float phaseCount = 0;
 float interval_effort = 0;
+float rep = 0;
 
 int64_t setDuration_us = 0;
 
@@ -172,19 +173,20 @@ void app_main()
             }
 
             phaseCount++;
+
+            rep = phaseCount / 2;
         }
 
         // // debuging purposes
-        // // printf(">sig_filt:%f\n", accel_filt_out.sig_filt);
+        printf(">sig_filt:%f\n", accel_filt_out.sig_filt);
         // printf(">p_threshold:%f\n", p_threshold);
         // // printf(">interval:%f\n", pdp.p_interval_s);
         // // printf(">p_flag:%d\n", pdp.peakFlag);
         // // printf(">effort:%f\n", pdp.interval_effort);
         // // printf(">effort/s:%f\n", pdp.effort_s);
 
-        // printf(">cycleCount:%f\n", phaseCount);
+        printf(">reps:%f\n", rep);
         // printf(">gx:%f\n", gx_corrected);
-        // printf(">counts:%f\n", (float)result * 10);
         // printf(">posThresh:%f\n", 4.0f);
         // printf(">negThresh:%f\n", -4.0f);
         // printf(">gx_angle:%f\n", gx_angle);
