@@ -44,12 +44,12 @@ stopwatch_obj sample_watch = {0};
 int64_t sample_interval_us;
 alarm_obj setAlarm_obj = {0};
 
-int64_t phase_timeStamps[20];
+int64_t setSpan;
 
 int phase_index;
 int64_t set_start_time;
 
-void test();
+void end_of_set_event();
 
 bool setState = false;
 bool setStateTest = false; // delete later
@@ -115,8 +115,8 @@ void app_main()
         lowpass_filter(&accel_filt_out, accel_alpha, accel_sample.a_abs);
 
         lowpass_filter(&gyro_x_filt_out, 0.08, gx_corrected);
-        lowpass_filter(&gyro_y_filt_out, 0.1, gy_corrected);
-        lowpass_filter(&gyro_z_filt_out, 0.1, gz_corrected);
+        // lowpass_filter(&gyro_y_filt_out, 0.1, gy_corrected);
+        // lowpass_filter(&gyro_z_filt_out, 0.1, gz_corrected);
 
         // // integration
         if (valid_dt)
@@ -136,39 +136,14 @@ void app_main()
             }
         }
 
-        // set detection
-        // todo: Make a set active and set inactive flag, use a timer for that too
-
-        // env_creation_irsf(&p_env, accel_filt_out.sig_filt, p_alpha_release);
-
-        // // // threshold (95% of the envelope)
-        // p_threshold = p_env * .95;
-
-        // if (accel_filt_out.sig_filt > 0.1f)
-        //     accel_signal_sum += accel_filt_out.sig_filt;
-        // else
-        //     accel_signal_sum = 0.0f;
-
-        // if (peak_detection(accel_filt_out.sig_filt, p_threshold, &pdp))
-        // {
-        //     int64_t interval_us;
-
-        //     // returns true at the end of an interval
-        //     if (stopwatch_lap(&pdp.s_obj, &interval_us))
-        //     {
-        //         pdp.p_interval_s =
-        //             interval_us / 1000000.0f;
-
-        //         pdp.interval_complete = true;
-        //     }
-        // }
-
         bool result = transition_detection(gx_corrected);
 
         if (alarm_is_active(&setAlarm_obj))
         {
             // printf("%lld\n", (setAlarm_obj.deadline_us - esp_timer_get_time()));
+            // update the counter
             alarm_update(&setAlarm_obj);
+
             if (!alarm_is_active(&setAlarm_obj))
             {
                 setState = false;
@@ -186,12 +161,9 @@ void app_main()
                 setStateTest = true;
                 // start an inactivity alarm
                 if (!setAlarm_obj.active)
-                    alarm_start(&setAlarm_obj, SET_TIMEOUT_US, test);
+                    alarm_start(&setAlarm_obj, SET_TIMEOUT_US, end_of_set_event);
                 // record the set start time at the beginning of each set
                 set_start_time = esp_timer_get_time();
-                // reset the timestamp collection on each new set
-                memset(phase_timeStamps, 0, sizeof(phase_timeStamps));
-                phase_index = 0;
             }
             // reset alarm with each peak??
             if (alarm_is_active(&setAlarm_obj))
@@ -200,27 +172,6 @@ void app_main()
             }
 
             phaseCount++;
-            // add the timestamps of the phase to the collection
-            phase_timeStamps[phase_index] = esp_timer_get_time() - set_start_time;
-            // print the timestamp
-            printf("Timestamp at %d: %f\n", phase_index, (float)phase_timeStamps[phase_index] / 1e6);
-
-            if (phase_index >= 20)
-            {
-                printf("reset timestamp\n");
-
-                // for (int i = 0; i < 20; i++)
-                // {
-                //     setDuration_us += phase_timeStamps[i];
-                // }
-                setDuration_us += phase_timeStamps[phase_index];
-                phase_index = 0;
-                setStateTest = false;
-                printf("Total set duration so far: %f\n", (float)(setDuration_us / 1e6));
-            }
-            else
-                // increment
-                phase_index++;
         }
 
         // // debuging purposes
@@ -237,24 +188,18 @@ void app_main()
         // printf(">posThresh:%f\n", 4.0f);
         // printf(">negThresh:%f\n", -4.0f);
         // printf(">gx_angle:%f\n", gx_angle);
+        printf(">gx_filt:%f\n", gyro_x_filt_out.sig_filt);
 
-        // printf(">gx_filt:%f\n", gyro_x_filt_out.sig_filt);
-
-        // printf(">setDuratiion:%f\n", (float)(setWindow_us / 1E6));
+        printf(">setDuratiion:%f\n", (float)(setDuration_us / 1E6));
+        printf(">setState:%d\n", (int)setState);
         fflush(stdout);
 
         vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
 
-void test()
+void end_of_set_event()
 {
-    // end of a set
-    setDuration_us += phase_timeStamps[phase_index - 1];
-    phase_index = 0;
-    setStateTest = false;
-
-    printf("set ended\n");
-    printf("Total set duration: %f\n", (float)(setDuration_us / 1e6));
-    setDuration_us = 0;
+    // printf("Total set duration: %f\n", (float)(setDuration_us / 1e6));
+    setDuration_us = esp_timer_get_time() - set_start_time - SET_TIMEOUT_US;
 }
