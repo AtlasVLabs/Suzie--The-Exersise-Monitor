@@ -25,9 +25,9 @@ float p_alpha_release = .04; // alpha for the peak envelope. Slow decent after p
 float gx_angle, gy_angle, gz_angle;
 float accel_signal_sum = 0;
 
-float phaseCount = 0;
+int phaseCount = 0;
 float interval_effort = 0;
-float rep = 0;
+int rep = 0;
 
 int64_t setDuration_us = 0;
 
@@ -53,7 +53,6 @@ int64_t set_start_time;
 void end_of_set_event();
 
 bool setState = false;
-bool setStateTest = false; // delete later
 void app_main()
 {
     // inits-------------------------------------------------
@@ -159,12 +158,14 @@ void app_main()
             if (!setState)
             {
                 setState = true;
-                setStateTest = true;
+                set_start_time = esp_timer_get_time();
+                phaseCount = 0;
+                rep = 0;
+
                 // start an inactivity alarm
                 if (!setAlarm_obj.active)
                     alarm_start(&setAlarm_obj, SET_TIMEOUT_US, end_of_set_event);
                 // record the set start time at the beginning of each set
-                set_start_time = esp_timer_get_time();
             }
             // reset alarm with each peak??
             if (alarm_is_active(&setAlarm_obj))
@@ -185,7 +186,7 @@ void app_main()
         // // printf(">effort:%f\n", pdp.interval_effort);
         // // printf(">effort/s:%f\n", pdp.effort_s);
 
-        printf(">reps:%f\n", rep);
+        printf(">reps:%d\n", rep);
         // printf(">gx:%f\n", gx_corrected);
         // printf(">posThresh:%f\n", 4.0f);
         // printf(">negThresh:%f\n", -4.0f);
