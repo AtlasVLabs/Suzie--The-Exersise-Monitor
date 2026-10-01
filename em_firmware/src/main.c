@@ -49,6 +49,7 @@ int64_t setSpan;
 
 int phase_index;
 int64_t set_start_time;
+bool rep_status;
 
 void end_of_set_event();
 
@@ -98,8 +99,7 @@ void app_main()
         // Reading gyro values
         read_gyro(&gyro_sample);
 
-        // // timer for each sample read
-
+        // timer for each sample read
         bool valid_dt =
             stopwatch_lap(&sample_watch, &sample_interval_us);
         //-------------------------------------------------------------
@@ -136,7 +136,7 @@ void app_main()
             }
         }
 
-        bool result = transition_detection(gx_corrected);
+        bool transition_detected = transition_detection(gx_corrected);
 
         if (alarm_is_active(&setAlarm_obj))
         {
@@ -151,7 +151,7 @@ void app_main()
         }
 
         // reps
-        if (result)
+        if (transition_detected)
         {
 
             // start of set
@@ -176,7 +176,17 @@ void app_main()
             phaseCount++;
 
             rep = phaseCount / 2;
+            if (phaseCount % 2 == 0)
+            {
+                rep_status = !rep_status;
+            }
         }
+
+        //-----------------------------------------------------
+        // PER REP METRICS BUILDER
+        //-----------------------------------------------------
+
+        //-----------------------------------------------------
 
         // // debuging purposes
         printf(">sig_filt:%f\n", accel_filt_out.sig_filt);
@@ -188,13 +198,14 @@ void app_main()
 
         printf(">reps:%d\n", rep);
         // printf(">gx:%f\n", gx_corrected);
-        // printf(">posThresh:%f\n", 4.0f);
-        // printf(">negThresh:%f\n", -4.0f);
+        printf(">posThresh:%f\n", 4.0f);
+        printf(">negThresh:%f\n", -4.0f);
         // printf(">gx_angle:%f\n", gx_angle);
         printf(">gx_filt:%f\n", gyro_x_filt_out.sig_filt);
 
         printf(">setDuratiion:%f\n", (float)(setDuration_us / 1E6));
         printf(">setState:%d\n", (int)setState);
+        printf(">repStatus:%d\n", (int)rep_status);
         fflush(stdout);
 
         vTaskDelay(pdMS_TO_TICKS(10));
