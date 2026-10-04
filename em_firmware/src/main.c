@@ -180,6 +180,7 @@ void app_main()
             {
                 rep_status = !rep_status;
             }
+            // rep_status = !rep_status;
         }
 
         //-----------------------------------------------------
@@ -197,7 +198,7 @@ void app_main()
         // // printf(">effort/s:%f\n", pdp.effort_s);
 
         printf(">reps:%d\n", rep);
-        // printf(">gx:%f\n", gx_corrected);
+        printf(">gx:%f\n", gx_corrected);
         printf(">posThresh:%f\n", 4.0f);
         printf(">negThresh:%f\n", -4.0f);
         // printf(">gx_angle:%f\n", gx_angle);
@@ -205,7 +206,7 @@ void app_main()
 
         printf(">setDuratiion:%f\n", (float)(setDuration_us / 1E6));
         printf(">setState:%d\n", (int)setState);
-        printf(">repStatus:%d\n", (int)rep_status);
+        printf(">repStatus:%d\n", (int)rep_status * 20);
         fflush(stdout);
 
         vTaskDelay(pdMS_TO_TICKS(10));

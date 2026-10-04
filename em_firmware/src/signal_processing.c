@@ -101,6 +101,7 @@ bool peak_detection(float sig, float p_threshold, peak_det_params_t *params)
     return false; // fail-safe
 }
 
+
 bool transition_detection(float sig)
 {
     if (sig >= CD_THRESHOLD_UPPER)
@@ -127,3 +128,29 @@ bool transition_detection(float sig)
 
     return false;
 }
+
+// bool transition_detection(float sig)
+// {
+//     if (sig >= CD_THRESHOLD_UPPER)
+//     {
+//         if (last_extreme == negative)
+//         {
+//             last_extreme = positive;
+//             return true;
+//         }
+//         // transition to positive from negative
+//         last_extreme = positive;
+//     }
+//     else if (sig <= CD_THRESHOLD_LOWER)
+//     {
+//         if (last_extreme == positive)
+//         {
+//             last_extreme = true;
+//             return true;
+//         }
+//         // transition to positive from negative
+//         last_extreme = negative;
+//     }
+
+//     return false;
+// }
