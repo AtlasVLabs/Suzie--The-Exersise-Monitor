@@ -51,6 +51,29 @@ int phase_index;
 int64_t set_start_time;
 bool rep_status;
 
+bool curr_rep_active;
+
+// REP OBJ------------------------------
+typedef struct
+{
+    float angle_max;
+    float angle_min;
+    float ROM;
+    float effort;
+    int64_t duration_us;
+
+} rep_obj;
+
+stopwatch_obj rep_watch = {0}; // stopwatch object for reps
+
+rep_obj rep_obj_buffer[5];
+int rep_obj_index;
+
+int64_t curr_rep_duration_us;
+
+// float rep_consistency;
+//--------------------------------------
+
 void end_of_set_event();
 
 bool setState = false;
@@ -178,7 +201,8 @@ void app_main()
             rep = phaseCount / 2;
             if (phaseCount % 2 == 0)
             {
-                rep_status = !rep_status;
+                stopwatch_lap(&rep_watch, &curr_rep_duration_us);
+                // new rep obj
             }
             // rep_status = !rep_status;
         }

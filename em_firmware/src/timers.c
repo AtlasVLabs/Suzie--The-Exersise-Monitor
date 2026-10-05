@@ -89,7 +89,7 @@ bool stopwatch_lap(stopwatch_obj *obj, int64_t *interval_us)
     *interval_us = now_us - obj->start_time_us;
 
     obj->start_time_us = now_us;
-    obj->duration_us = *interval_us;
+    obj->duration_us = stopwatch_elapsed(obj);
 
     return true;
 }
