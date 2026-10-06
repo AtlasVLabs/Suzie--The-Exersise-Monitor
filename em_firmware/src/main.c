@@ -65,6 +65,7 @@ typedef struct
 } rep_obj;
 
 stopwatch_obj rep_watch = {0}; // stopwatch object for reps
+rep_obj curr_rep_obj = {0};
 
 rep_obj rep_obj_buffer[5];
 int rep_obj_index;
@@ -201,8 +202,11 @@ void app_main()
             rep = phaseCount / 2;
             if (phaseCount % 2 == 0)
             {
-                stopwatch_lap(&rep_watch, &curr_rep_duration_us);
+                rep_status = stopwatch_lap(&rep_watch, &curr_rep_duration_us);
                 // new rep obj
+                // curr_rep_obj.
+                // rep_obj_buffer[rep_obj_index] = curr_rep_obj;
+                // rep_obj_index++;
             }
             // rep_status = !rep_status;
         }
