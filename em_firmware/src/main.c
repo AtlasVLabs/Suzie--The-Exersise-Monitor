@@ -208,19 +208,23 @@ void app_main()
                     last_rep_duration_us = stopwatch_end(&rep_watch);
                 }
                 stopwatch_start(&rep_watch);
-                gx_angle_max = 0;
-                gx_angle_min = 0;
+                gx_angle_max = gx_angle;
+                gx_angle_min = gx_angle;
 
                 // new rep obj
                 // curr_rep_obj.
                 // rep_obj_buffer[rep_obj_index] = curr_rep_obj;
                 // rep_obj_index++;
             }
-
-            
-
-            // rep_status = !rep_status;
         }
+
+        // look for the max and min angle
+        if (gx_angle_max < gx_angle)
+            gx_angle_max = gx_angle;
+        if (gx_angle_min > gx_angle)
+            gx_angle_min = gx_angle;
+
+        // rep_status = !rep_status;
 
         //-----------------------------------------------------
         // PER REP METRICS BUILDER
@@ -236,12 +240,17 @@ void app_main()
         // // printf(">effort:%f\n", pdp.interval_effort);
         // // printf(">effort/s:%f\n", pdp.effort_s);
 
-        printf(">last rep dur:%f\n", (float)(last_rep_duration_us / 1E6));
-        printf(">reps:%d\n", rep);
+        // printf(">last rep dur:%f\n", (float)(last_rep_duration_us / 1E6));
+        // printf(">reps:%d\n", rep);
+
         printf(">gx:%f\n", gx_corrected);
         printf(">posThresh:%f\n", 4.0f);
         printf(">negThresh:%f\n", -4.0f);
-        // printf(">gx_angle:%f\n", gx_angle);
+        printf(">gx_angle_max:%f\n", gx_angle_max);
+        printf(">gx_angle_min:%f\n", gx_angle_min);
+        printf(">ang-diff:%f\n", gx_angle_max - gx_angle_min);
+
+        printf(">gx_angle:%f\n", gx_angle);
         // printf(">rep_watch active:%d\n", rep_watch.active * 10);
         // printf(">test:%d\n", (int)test * 10);
 
@@ -260,4 +269,7 @@ void end_of_set_event()
 
     // reset set metrics
     last_rep_duration_us = 0;
+    gx_angle_max = 0;
+    gx_angle_min = 0;
+    gx_angle = 0;
 }
