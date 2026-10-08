@@ -70,7 +70,7 @@ rep_obj curr_rep_obj = {0};
 rep_obj rep_obj_buffer[5];
 int rep_obj_index;
 
-int64_t curr_rep_duration_us;
+int64_t last_rep_duration_us;
 
 // float rep_consistency;
 //--------------------------------------
@@ -202,12 +202,19 @@ void app_main()
             rep = phaseCount / 2;
             if (phaseCount % 2 == 0)
             {
-                rep_status = stopwatch_lap(&rep_watch, &curr_rep_duration_us);
+                rep_status = stopwatch_lap(&rep_watch, &);
+                if (rep_watch.active)
+                {
+                    last_rep_duration_us = rep_watch.duration_us;
+                    stopwatch_end(&rep_watch);
+                }
+                stopwatch_start(&rep_watch);
                 // new rep obj
                 // curr_rep_obj.
                 // rep_obj_buffer[rep_obj_index] = curr_rep_obj;
                 // rep_obj_index++;
             }
+
             // rep_status = !rep_status;
         }
 
