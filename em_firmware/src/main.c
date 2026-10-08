@@ -49,9 +49,8 @@ int64_t setSpan;
 
 int phase_index;
 int64_t set_start_time;
-bool rep_status;
 
-bool curr_rep_active;
+float gx_angle_max, gx_angle_min;
 
 // REP OBJ------------------------------
 typedef struct
@@ -200,20 +199,25 @@ void app_main()
             phaseCount++;
 
             rep = phaseCount / 2;
-            if (phaseCount % 2 == 0)
+            if (phaseCount % 2 == 0 && phaseCount > 0)
             {
-                rep_status = stopwatch_lap(&rep_watch, &);
+
                 if (rep_watch.active)
                 {
-                    last_rep_duration_us = rep_watch.duration_us;
-                    stopwatch_end(&rep_watch);
+                    // test = true;
+                    last_rep_duration_us = stopwatch_end(&rep_watch);
                 }
                 stopwatch_start(&rep_watch);
+                gx_angle_max = 0;
+                gx_angle_min = 0;
+
                 // new rep obj
                 // curr_rep_obj.
                 // rep_obj_buffer[rep_obj_index] = curr_rep_obj;
                 // rep_obj_index++;
             }
+
+            
 
             // rep_status = !rep_status;
         }
@@ -225,23 +229,24 @@ void app_main()
         //-----------------------------------------------------
 
         // // debuging purposes
-        printf(">sig_filt:%f\n", accel_filt_out.sig_filt);
+        // printf(">sig_filt:%f\n", accel_filt_out.sig_filt);
         // printf(">p_threshold:%f\n", p_threshold);
         // // printf(">interval:%f\n", pdp.p_interval_s);
         // // printf(">p_flag:%d\n", pdp.peakFlag);
         // // printf(">effort:%f\n", pdp.interval_effort);
         // // printf(">effort/s:%f\n", pdp.effort_s);
 
+        printf(">last rep dur:%f\n", (float)(last_rep_duration_us / 1E6));
         printf(">reps:%d\n", rep);
         printf(">gx:%f\n", gx_corrected);
         printf(">posThresh:%f\n", 4.0f);
         printf(">negThresh:%f\n", -4.0f);
         // printf(">gx_angle:%f\n", gx_angle);
-        printf(">gx_filt:%f\n", gyro_x_filt_out.sig_filt);
+        // printf(">rep_watch active:%d\n", rep_watch.active * 10);
+        // printf(">test:%d\n", (int)test * 10);
 
-        printf(">setDuratiion:%f\n", (float)(setDuration_us / 1E6));
-        printf(">setState:%d\n", (int)setState);
-        printf(">repStatus:%d\n", (int)rep_status * 20);
+        // printf(">setDuratiion:%f\n", (float)(setDuration_us / 1E6));
+
         fflush(stdout);
 
         vTaskDelay(pdMS_TO_TICKS(10));
@@ -252,4 +257,7 @@ void end_of_set_event()
 {
     // printf("Total set duration: %f\n", (float)(setDuration_us / 1e6));
     setDuration_us = esp_timer_get_time() - set_start_time - SET_TIMEOUT_US;
+
+    // reset set metrics
+    last_rep_duration_us = 0;
 }

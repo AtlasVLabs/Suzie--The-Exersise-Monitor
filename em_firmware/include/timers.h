@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include "esp_timer.h"
+#include <inttypes.h>
 
 // alarm callback
 typedef void (*timer_callback_t)(void);
@@ -60,5 +61,6 @@ int64_t stopwatch_end(stopwatch_obj *stopwatch);
 /// @return elapsed time of the event
 int64_t stopwatch_elapsed(stopwatch_obj *stopwatch);
 
-
 bool stopwatch_lap(stopwatch_obj *obj, int64_t *interval_us);
+
+void stopwatch_print(const stopwatch_obj *sw);

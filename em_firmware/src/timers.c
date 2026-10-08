@@ -100,3 +100,13 @@ int64_t alarm_timeLeft(const alarm_obj *alarm)
         return 0;
     return alarm->deadline_us - esp_timer_get_time();
 }
+
+void stopwatch_print(const stopwatch_obj *sw)
+{
+    printf("------ STOPWATCH ------\n");
+    printf("start_time_us: %" PRId64 " us\n", sw->start_time_us);
+    printf("duration_us:   %" PRId64 " us\n", sw->duration_us);
+    printf("duration:      %.3f s\n", sw->duration_us / 1000000.0);
+    printf("active:        %s\n", sw->active ? "true" : "false");
+    printf("-----------------------\n");
+}
