@@ -14,6 +14,40 @@
 #define USER_LED GPIO_NUM_21
 #define SET_TIMEOUT_US 5000000LL
 
+// REP OBJECT ------------------------------
+// Stores the finalized metrics for a single completed rep.
+typedef struct
+{
+    // What rep is this
+    int rep_index;
+    // Maximum angle of the primary angle reached during the rep.
+    float angle_max;
+    // Minimum angle of the primary angle reached during the rep.
+    float angle_min;
+    // Range of motion for the rep.
+    // Calculated as angle_max - angle_min.
+    float ROM;
+    // Total accumulated movement effort for the rep.
+    float effort;
+    // Total duration of the rep, in microseconds.
+    int64_t duration_us;
+} rep_obj;
+
+typedef struct
+{
+    int set_index;
+    int64_t set_duration_us;
+    
+    float avg_ROM;
+    float avg_effort;
+    float avg_rep_duration_us;
+
+    float rec_effort;
+    float rec_ROM;
+    float rec_rep_duration_us;
+
+} set_obj;
+
 // variables---------------------------------------------
 // Low-pass filter smoothing factor for acceleration data.
 float accel_alpha = 0.08f;
@@ -29,6 +63,8 @@ float gx_angle_max;
 float gx_angle_min;
 // Accumulated movement effort for the current rep.
 float rep_effort = 0.0f;
+// Alpha value for recent metrics
+float set_ema_alpha = 0.30f;
 // Number of detected movement phases in the current set.
 // Two phases represent one complete rep.
 int phase_count = 0;
@@ -70,33 +106,15 @@ alarm_obj set_alarm_obj = {0};
 stopwatch_obj rep_watch = {0};
 // Stores the metrics for the most recently completed rep.
 rep_obj curr_rep_obj = {0};
+// Stores the metrics for the most recently completed set.
+set_obj curr_set_obj = {0};
 // True while a workout set is currently active.
 // Becomes false after the set inactivity timeout expires.
 bool set_active = false;
 // Callback executed when the set inactivity alarm expires.
 void end_of_set_event();
 
-// REP OBJECT ------------------------------
-// Stores the finalized metrics for a single completed rep.
-typedef struct
-{
-    // Maximum X-axis angle reached during the rep.
-    float angle_max;
-
-    // Minimum X-axis angle reached during the rep.
-    float angle_min;
-
-    // Range of motion for the rep.
-    // Calculated as angle_max - angle_min.
-    float ROM;
-
-    // Total accumulated movement effort for the rep.
-    float effort;
-
-    // Total duration of the rep, in microseconds.
-    int64_t duration_us;
-
-} rep_obj;
+void builder();
 
 void app_main()
 {
@@ -265,4 +283,47 @@ void end_of_set_event()
 
     // reset rep watch
     stopwatch_end(&rep_watch);
+}
+
+void builder()
+{
+    // update the avg metrics
+    curr_set_obj.avg_ROM +=
+        (curr_rep_obj.ROM - curr_set_obj.avg_ROM) /
+        rep;
+
+    curr_set_obj.avg_effort +=
+        (curr_rep_obj.effort - curr_set_obj.avg_effort) /
+        rep;
+
+    curr_set_obj.avg_rep_duration_us +=
+        ((float)curr_rep_obj.duration_us -
+         curr_set_obj.avg_rep_duration_us) /
+        rep;
+
+    // update the recent metrics
+    if (rep == 1)
+    {
+        curr_set_obj.rec_ROM = curr_rep_obj.ROM;
+        curr_set_obj.rec_effort = curr_rep_obj.effort;
+        curr_set_obj.rec_rep_duration_us =
+            (float)curr_rep_obj.duration_us;
+    }
+    else
+    {
+        ema_machine(
+            curr_rep_obj.ROM,
+            set_ema_alpha,
+            &curr_set_obj.rec_ROM);
+
+        ema_machine(
+            curr_rep_obj.effort,
+            set_ema_alpha,
+            &curr_set_obj.rec_effort);
+
+        ema_machine(
+            (float)curr_rep_obj.duration_us,
+            set_ema_alpha,
+            &curr_set_obj.rec_rep_duration_us);
+    }
 }
