@@ -672,7 +672,7 @@
         "uuid": "fb768f1d-73c8-4399-bead-ce4ad5cbc2a0"
       }
     ],
-    "used_designators": "#PWR29-30",
+    "used_designators": "#PWR12-13,#PWR18,C5,C8-9,TP3-7,U5-6",
     "variants": []
   },
   "sheets": [
