@@ -36,8 +36,9 @@ typedef struct
 typedef struct
 {
     int set_index;
+    int rep_count;
     int64_t set_duration_us;
-    
+
     float avg_ROM;
     float avg_effort;
     float avg_rep_duration_us;
@@ -68,10 +69,10 @@ float set_ema_alpha = 0.30f;
 // Number of detected movement phases in the current set.
 // Two phases represent one complete rep.
 int phase_count = 0;
-// Number of completed reps in the current set.
-int rep = 0;
 // Index used for phase-related data storage or processing.
 int phase_index;
+// Number of sets done per workout
+int set_count;
 // Number of initial sensor samples ignored to allow sensor
 // and filter values to stabilize.
 int startup_samples = 20;
@@ -114,7 +115,9 @@ bool set_active = false;
 // Callback executed when the set inactivity alarm expires.
 void end_of_set_event();
 
-void builder();
+void update_set_metrics(set_obj *set, rep_obj *rep);
+
+void finalize_set(set_obj *set);
 
 void app_main()
 {
@@ -212,7 +215,7 @@ void app_main()
                 set_active = true;
                 set_start_time = esp_timer_get_time();
                 phase_count = 0;
-                rep = 0;
+                curr_set_obj.rep_count = 0;
 
                 // start an inactivity alarm
                 if (!set_alarm_obj.active)
@@ -224,20 +227,24 @@ void app_main()
                 alarm_reset(&set_alarm_obj, SET_TIMEOUT_US);
             }
 
-            phase_count++;
-            rep = phase_count / 2;
+            phase_count++; // a rep is divided into 2 phases
             if (phase_count % 2 == 0 && phase_count > 0)
             {
                 if (rep_watch.active) // end of a rep
                 {
                     last_rep_duration_us = stopwatch_end(&rep_watch);
+                    curr_set_obj.rep_count++;
 
+                    // finalize rep
                     curr_rep_obj = (rep_obj){
+                        .rep_index = curr_set_obj.rep_count,
                         .angle_max = gx_angle_max,
                         .angle_min = gx_angle_min,
                         .duration_us = last_rep_duration_us,
                         .ROM = gx_angle_max - gx_angle_min,
                         .effort = rep_effort};
+
+                    update_set_metrics(&curr_set_obj, &curr_rep_obj);
                 }
                 stopwatch_start(&rep_watch);
                 // reset variables at the start
@@ -255,12 +262,44 @@ void app_main()
         //-----------------------------------------------------
         // debuging purposes
 
-        printf(">gx:%f\n", gx_corrected);
-        printf(">angle_max:%f\n", curr_rep_obj.angle_max);
-        printf(">angle_min:%f\n", curr_rep_obj.angle_min);
-        printf(">duration_us:%lld\n", (long long)curr_rep_obj.duration_us);
+        // printf(">gx:%f\n", gx_corrected);
+        // printf(">angle_max:%f\n", curr_rep_obj.angle_max);
+        // printf(">angle_min:%f\n", curr_rep_obj.angle_min);
+        // printf(">duration_us:%lld\n", (long long)curr_rep_obj.duration_us);
+        // printf(">ROM:%f\n", curr_rep_obj.ROM);
+        // printf(">effort:%f\n", curr_rep_obj.effort);
+
+        printf(">rep_index:%d\n", curr_rep_obj.rep_index);
+
         printf(">ROM:%f\n", curr_rep_obj.ROM);
+        printf(">avg_ROM:%f\n", curr_set_obj.avg_ROM);
+        printf(">rec_ROM:%f\n", curr_set_obj.rec_ROM);
+
         printf(">effort:%f\n", curr_rep_obj.effort);
+        printf(">avg_effort:%f\n", curr_set_obj.avg_effort);
+        printf(">rec_effort:%f\n", curr_set_obj.rec_effort);
+
+        printf(">rep_duration_us:%lld\n",
+               (long long)curr_rep_obj.duration_us);
+
+        printf(">avg_rep_duration_us:%f\n",
+               curr_set_obj.avg_rep_duration_us);
+
+        printf(">rec_rep_duration_us:%f\n",
+               curr_set_obj.rec_rep_duration_us);
+
+        printf(">ROM_recent_vs_avg:%f\n",
+               curr_set_obj.rec_ROM -
+                   curr_set_obj.avg_ROM);
+
+        printf(">effort_recent_vs_avg:%f\n",
+               curr_set_obj.rec_effort -
+                   curr_set_obj.avg_effort);
+
+        printf(">duration_recent_vs_avg:%f\n",
+               curr_set_obj.rec_rep_duration_us -
+                   curr_set_obj.avg_rep_duration_us);
+
         fflush(stdout);
         vTaskDelay(pdMS_TO_TICKS(10));
     }
@@ -268,9 +307,6 @@ void app_main()
 
 void end_of_set_event()
 {
-    // printf("Total set duration: %f\n", (float)(setDuration_us / 1e6));
-    setDuration_us = esp_timer_get_time() - set_start_time - SET_TIMEOUT_US;
-
     // reset rep metrics
     last_rep_duration_us = 0;
     gx_angle_max = 0;
@@ -278,52 +314,72 @@ void end_of_set_event()
     gx_angle = 0;
     rep_effort = 0;
 
+    set_count++;
+    finalize_set(&curr_set_obj);
+
     // reset current rep obj
     curr_rep_obj = (rep_obj){0};
+    // reset the current set obj
+    curr_set_obj = (set_obj){0};
 
     // reset rep watch
     stopwatch_end(&rep_watch);
 }
 
-void builder()
+void update_set_metrics(set_obj *set, rep_obj *rep)
 {
+    int n = set->rep_count;
+    set->set_index = set_count;
+
     // update the avg metrics
-    curr_set_obj.avg_ROM +=
-        (curr_rep_obj.ROM - curr_set_obj.avg_ROM) /
-        rep;
+    set->avg_ROM +=
+        (rep->ROM - set->avg_ROM) /
+        set->rep_count;
+    ;
 
-    curr_set_obj.avg_effort +=
-        (curr_rep_obj.effort - curr_set_obj.avg_effort) /
-        rep;
+    set->avg_effort +=
+        (rep->effort - set->avg_effort) /
+        set->rep_count;
+    ;
 
-    curr_set_obj.avg_rep_duration_us +=
-        ((float)curr_rep_obj.duration_us -
-         curr_set_obj.avg_rep_duration_us) /
-        rep;
+    set->avg_rep_duration_us +=
+        ((float)rep->duration_us -
+         set->avg_rep_duration_us) /
+        set->rep_count;
+    ;
 
     // update the recent metrics
-    if (rep == 1)
+    if (set->rep_count == 1)
     {
-        curr_set_obj.rec_ROM = curr_rep_obj.ROM;
-        curr_set_obj.rec_effort = curr_rep_obj.effort;
-        curr_set_obj.rec_rep_duration_us =
-            (float)curr_rep_obj.duration_us;
+        set->rec_ROM = rep->ROM;
+        set->rec_effort = rep->effort;
+        set->rec_rep_duration_us =
+            (float)rep->duration_us;
     }
     else
     {
         ema_machine(
-            curr_rep_obj.ROM,
+            rep->ROM,
             set_ema_alpha,
-            &curr_set_obj.rec_ROM);
+            &set->rec_ROM);
 
         ema_machine(
-            curr_rep_obj.effort,
+            rep->effort,
             set_ema_alpha,
-            &curr_set_obj.rec_effort);
+            &set->rec_effort);
 
         ema_machine(
-            (float)curr_rep_obj.duration_us,
+            (float)rep->duration_us,
             set_ema_alpha,
-            &curr_set_obj.rec_rep_duration_us);
+            &set->rec_rep_duration_us);
     }
+}
+
+void finalize_set(set_obj *set)
+{
+    set->set_duration_us =
+        esp_timer_get_time() - set_start_time - SET_TIMEOUT_US;
+
+    // anything else that only becomes known
+    // once the set is definitely over
 }
