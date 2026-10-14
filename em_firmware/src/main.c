@@ -11,6 +11,71 @@
 #include "signal_processing.h"
 #include "timers.h"
 
+//------------------------------------------------------------
+#include <stdbool.h>
+#include <stdatomic.h>
+
+#include "nimble-nordic-uart.h"
+#include "esp_err.h"
+#include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
+static atomic_bool ble_connected = false;
+
+// Called when a device connects or disconnects.
+static void on_ble_connection(enum nordic_uart_callback_type event)
+{
+    bool connected = (event == NORDIC_UART_CONNECTED);
+    atomic_store(&ble_connected, connected);
+
+    ESP_LOGI("BLE", "%s", connected ? "Connected" : "Disconnected");
+}
+
+// Called when data arrives from the app.
+static void on_ble_receive(struct ble_gatt_access_ctxt *ctxt)
+{
+    char buffer[65];
+    size_t length = OS_MBUF_PKTLEN(ctxt->om);
+
+    // Small messages only for this first test.
+    if (length > sizeof(buffer) - 1)
+    {
+        ESP_LOGW("BLE", "Received message too long");
+        return;
+    }
+
+    if (os_mbuf_copydata(ctxt->om, 0, length, buffer) != 0)
+    {
+        return;
+    }
+
+    buffer[length] = '\0';
+
+    ESP_LOGI("BLE", "Received: %s", buffer);
+}
+
+// Sends a short test message once per second.
+static void ble_test_task(void *argument)
+{
+    while (1)
+    {
+        if (atomic_load(&ble_connected))
+        {
+            esp_err_t result =
+                nordic_uart_sendln("Hello from Suzie");
+
+            if (result != ESP_OK)
+            {
+                ESP_LOGW("BLE", "Send failed");
+            }
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+}
+//------------------------------------------------------------
+
 #define USER_LED GPIO_NUM_21
 #define SET_TIMEOUT_US 5000000LL
 
@@ -122,6 +187,18 @@ void finalize_set(set_obj *set);
 void app_main()
 {
     // inits-------------------------------------------------
+    ESP_ERROR_CHECK(nordic_uart_yield(on_ble_receive));
+    ESP_ERROR_CHECK(nordic_uart_start("Suzie", on_ble_connection));
+
+    BaseType_t result = xTaskCreate(
+        ble_test_task,
+        "ble_test",
+        4096,
+        NULL,
+        2,
+        NULL);
+    configASSERT(result == pdPASS);
+    //-------------------------------------------------------
 
     gpio_config_t led_config = {
         .pin_bit_mask = 1ULL << USER_LED,
@@ -269,36 +346,36 @@ void app_main()
         // printf(">ROM:%f\n", curr_rep_obj.ROM);
         // printf(">effort:%f\n", curr_rep_obj.effort);
 
-        printf(">rep_index:%d\n", curr_rep_obj.rep_index);
+        // printf(">rep_index:%d\n", curr_rep_obj.rep_index);
 
-        printf(">ROM:%f\n", curr_rep_obj.ROM);
-        printf(">avg_ROM:%f\n", curr_set_obj.avg_ROM);
-        printf(">rec_ROM:%f\n", curr_set_obj.rec_ROM);
+        // printf(">ROM:%f\n", curr_rep_obj.ROM);
+        // printf(">avg_ROM:%f\n", curr_set_obj.avg_ROM);
+        // printf(">rec_ROM:%f\n", curr_set_obj.rec_ROM);
 
-        printf(">effort:%f\n", curr_rep_obj.effort);
-        printf(">avg_effort:%f\n", curr_set_obj.avg_effort);
-        printf(">rec_effort:%f\n", curr_set_obj.rec_effort);
+        // printf(">effort:%f\n", curr_rep_obj.effort);
+        // printf(">avg_effort:%f\n", curr_set_obj.avg_effort);
+        // printf(">rec_effort:%f\n", curr_set_obj.rec_effort);
 
-        printf(">rep_duration_us:%lld\n",
-               (long long)curr_rep_obj.duration_us);
+        // printf(">rep_duration_us:%lld\n",
+        //        (long long)curr_rep_obj.duration_us);
 
-        printf(">avg_rep_duration_us:%f\n",
-               curr_set_obj.avg_rep_duration_us);
+        // printf(">avg_rep_duration_us:%f\n",
+        //        curr_set_obj.avg_rep_duration_us);
 
-        printf(">rec_rep_duration_us:%f\n",
-               curr_set_obj.rec_rep_duration_us);
+        // printf(">rec_rep_duration_us:%f\n",
+        //        curr_set_obj.rec_rep_duration_us);
 
-        printf(">ROM_recent_vs_avg:%f\n",
-               curr_set_obj.rec_ROM -
-                   curr_set_obj.avg_ROM);
+        // printf(">ROM_recent_vs_avg:%f\n",
+        //        curr_set_obj.rec_ROM -
+        //            curr_set_obj.avg_ROM);
 
-        printf(">effort_recent_vs_avg:%f\n",
-               curr_set_obj.rec_effort -
-                   curr_set_obj.avg_effort);
+        // printf(">effort_recent_vs_avg:%f\n",
+        //        curr_set_obj.rec_effort -
+        //            curr_set_obj.avg_effort);
 
-        printf(">duration_recent_vs_avg:%f\n",
-               curr_set_obj.rec_rep_duration_us -
-                   curr_set_obj.avg_rep_duration_us);
+        // printf(">duration_recent_vs_avg:%f\n",
+        //        curr_set_obj.rec_rep_duration_us -
+        //            curr_set_obj.avg_rep_duration_us);
 
         fflush(stdout);
         vTaskDelay(pdMS_TO_TICKS(10));
@@ -328,7 +405,6 @@ void end_of_set_event()
 
 void update_set_metrics(set_obj *set, rep_obj *rep)
 {
-    int n = set->rep_count;
     set->set_index = set_count;
 
     // update the avg metrics
