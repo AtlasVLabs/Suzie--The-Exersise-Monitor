@@ -10,74 +10,16 @@
 #include "imu_service.h"
 #include "signal_processing.h"
 #include "timers.h"
-
-//------------------------------------------------------------
 #include <stdbool.h>
 #include <stdatomic.h>
-
 #include "nimble-nordic-uart.h"
 #include "esp_err.h"
 #include "esp_log.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
 
 static atomic_bool ble_connected = false;
-
-// Called when a device connects or disconnects.
-static void on_ble_connection(enum nordic_uart_callback_type event)
-{
-    bool connected = (event == NORDIC_UART_CONNECTED);
-    atomic_store(&ble_connected, connected);
-
-    ESP_LOGI("BLE", "%s", connected ? "Connected" : "Disconnected");
-}
-
-// Called when data arrives from the app.
-static void on_ble_receive(struct ble_gatt_access_ctxt *ctxt)
-{
-    char buffer[65];
-    size_t length = OS_MBUF_PKTLEN(ctxt->om);
-
-    // Small messages only for this first test.
-    if (length > sizeof(buffer) - 1)
-    {
-        ESP_LOGW("BLE", "Received message too long");
-        return;
-    }
-
-    if (os_mbuf_copydata(ctxt->om, 0, length, buffer) != 0)
-    {
-        return;
-    }
-
-    buffer[length] = '\0';
-
-    ESP_LOGI("BLE", "Received: %s", buffer);
-}
-
-// Sends a short test message once per second.
-static void ble_test_task(void *argument)
-{
-    while (1)
-    {
-        if (atomic_load(&ble_connected))
-        {
-            esp_err_t result =
-                nordic_uart_sendln("Hello from Suzie");
-
-            if (result != ESP_OK)
-            {
-                ESP_LOGW("BLE", "Send failed");
-            }
-        }
-
-        vTaskDelay(pdMS_TO_TICKS(1000));
-    }
-}
-//------------------------------------------------------------
-
 #define USER_LED GPIO_NUM_21
 #define SET_TIMEOUT_US 5000000LL
+#define TX_QUEUE_LENGTH 20
 
 // REP OBJECT ------------------------------
 // Stores the finalized metrics for a single completed rep.
@@ -114,7 +56,48 @@ typedef struct
 
 } set_obj;
 
+//--------------------------------------------------
+
+typedef struct
+{
+    uint8_t set_ID;
+    uint8_t rep_ID;
+
+    uint16_t ROM;
+    uint16_t effort;
+    uint16_t rep_duration;
+
+} rep_payload_obj;
+
+typedef struct
+{
+    uint8_t set_ID;
+    uint8_t rep_count;
+    uint32_t set_duration;
+} set_end_payload_obj;
+
+typedef enum
+{
+    PAYLOAD_SET_STARTED = 0xA001,
+    PAYLOAD_REP_COMPLETED = 0xB001,
+    PAYLOAD_SET_ENDED = 0xC001,
+} payload_type_t;
+
+typedef struct
+{
+    uint16_t p_comm;
+    uint16_t p_ID;
+
+    union
+    {
+        set_end_payload_obj set_end_obj;
+        rep_payload_obj rep_obj;
+    };
+} TX_payload_obj;
+
 // variables---------------------------------------------
+
+static QueueHandle_t tx_queue;
 // Low-pass filter smoothing factor for acceleration data.
 float accel_alpha = 0.08f;
 // Integrated gyroscope angle around the X-axis, in radians.
@@ -138,6 +121,8 @@ int phase_count = 0;
 int phase_index;
 // Number of sets done per workout
 int set_count;
+// count of sent payloads
+int payload_count;
 // Number of initial sensor samples ignored to allow sensor
 // and filter values to stabilize.
 int startup_samples = 20;
@@ -184,6 +169,16 @@ void update_set_metrics(set_obj *set, rep_obj *rep);
 
 void finalize_set(set_obj *set);
 
+static void on_ble_connection(enum nordic_uart_callback_type event);
+
+static void on_ble_receive(struct ble_gatt_access_ctxt *ctxt);
+
+static void ble_test_task(void *argument);
+
+TX_payload_obj make_payload(payload_type_t type);
+
+bool queue_payload(payload_type_t type);
+
 void app_main()
 {
     // inits-------------------------------------------------
@@ -199,15 +194,6 @@ void app_main()
         NULL);
     configASSERT(result == pdPASS);
     //-------------------------------------------------------
-
-    gpio_config_t led_config = {
-        .pin_bit_mask = 1ULL << USER_LED,
-        .mode = GPIO_MODE_OUTPUT,
-        .pull_up_en = GPIO_PULLUP_DISABLE,
-        .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .intr_type = GPIO_INTR_DISABLE};
-    gpio_config(&led_config);
-    gpio_set_level(USER_LED, 0);
     vTaskDelay(pdMS_TO_TICKS(5000));
     fflush(stdout);
     i2c_bus_init();
@@ -218,6 +204,10 @@ void app_main()
         .apm = bmi160_accel_pwr_normal,
         .gpm = bmi160_gyro_pwr_normal};
     BMI160_config(&bmiconfig);
+
+    tx_queue = xQueueCreate(TX_QUEUE_LENGTH, sizeof(TX_payload_obj));
+    configASSERT(tx_queue != NULL);
+
     fflush(stdout);
 
     while (1)
@@ -294,6 +284,8 @@ void app_main()
                 phase_count = 0;
                 curr_set_obj.rep_count = 0;
 
+                queue_payload(PAYLOAD_SET_STARTED);
+
                 // start an inactivity alarm
                 if (!set_alarm_obj.active)
                     alarm_start(&set_alarm_obj, SET_TIMEOUT_US, end_of_set_event);
@@ -322,6 +314,7 @@ void app_main()
                         .effort = rep_effort};
 
                     update_set_metrics(&curr_set_obj, &curr_rep_obj);
+                    queue_payload(PAYLOAD_REP_COMPLETED);
                 }
                 stopwatch_start(&rep_watch);
                 // reset variables at the start
@@ -346,36 +339,36 @@ void app_main()
         // printf(">ROM:%f\n", curr_rep_obj.ROM);
         // printf(">effort:%f\n", curr_rep_obj.effort);
 
-        // printf(">rep_index:%d\n", curr_rep_obj.rep_index);
+        printf(">rep_index:%d\n", curr_rep_obj.rep_index);
 
-        // printf(">ROM:%f\n", curr_rep_obj.ROM);
-        // printf(">avg_ROM:%f\n", curr_set_obj.avg_ROM);
-        // printf(">rec_ROM:%f\n", curr_set_obj.rec_ROM);
+        printf(">ROM:%f\n", curr_rep_obj.ROM);
+        printf(">avg_ROM:%f\n", curr_set_obj.avg_ROM);
+        printf(">rec_ROM:%f\n", curr_set_obj.rec_ROM);
 
-        // printf(">effort:%f\n", curr_rep_obj.effort);
-        // printf(">avg_effort:%f\n", curr_set_obj.avg_effort);
-        // printf(">rec_effort:%f\n", curr_set_obj.rec_effort);
+        printf(">effort:%f\n", curr_rep_obj.effort);
+        printf(">avg_effort:%f\n", curr_set_obj.avg_effort);
+        printf(">rec_effort:%f\n", curr_set_obj.rec_effort);
 
-        // printf(">rep_duration_us:%lld\n",
-        //        (long long)curr_rep_obj.duration_us);
+        printf(">rep_duration_us:%lld\n",
+               (long long)curr_rep_obj.duration_us);
 
-        // printf(">avg_rep_duration_us:%f\n",
-        //        curr_set_obj.avg_rep_duration_us);
+        printf(">avg_rep_duration_us:%f\n",
+               curr_set_obj.avg_rep_duration_us);
 
-        // printf(">rec_rep_duration_us:%f\n",
-        //        curr_set_obj.rec_rep_duration_us);
+        printf(">rec_rep_duration_us:%f\n",
+               curr_set_obj.rec_rep_duration_us);
 
-        // printf(">ROM_recent_vs_avg:%f\n",
-        //        curr_set_obj.rec_ROM -
-        //            curr_set_obj.avg_ROM);
+        printf(">ROM_recent_vs_avg:%f\n",
+               curr_set_obj.rec_ROM -
+                   curr_set_obj.avg_ROM);
 
-        // printf(">effort_recent_vs_avg:%f\n",
-        //        curr_set_obj.rec_effort -
-        //            curr_set_obj.avg_effort);
+        printf(">effort_recent_vs_avg:%f\n",
+               curr_set_obj.rec_effort -
+                   curr_set_obj.avg_effort);
 
-        // printf(">duration_recent_vs_avg:%f\n",
-        //        curr_set_obj.rec_rep_duration_us -
-        //            curr_set_obj.avg_rep_duration_us);
+        printf(">duration_recent_vs_avg:%f\n",
+               curr_set_obj.rec_rep_duration_us -
+                   curr_set_obj.avg_rep_duration_us);
 
         fflush(stdout);
         vTaskDelay(pdMS_TO_TICKS(10));
@@ -393,6 +386,7 @@ void end_of_set_event()
 
     set_count++;
     finalize_set(&curr_set_obj);
+    queue_payload(PAYLOAD_SET_ENDED);
 
     // reset current rep obj
     curr_rep_obj = (rep_obj){0};
@@ -458,4 +452,104 @@ void finalize_set(set_obj *set)
 
     // anything else that only becomes known
     // once the set is definitely over
+}
+
+// Called when a device connects or disconnects.
+static void on_ble_connection(enum nordic_uart_callback_type event)
+{
+    bool connected = (event == NORDIC_UART_CONNECTED);
+    atomic_store(&ble_connected, connected);
+
+    ESP_LOGI("BLE", "%s", connected ? "Connected" : "Disconnected");
+}
+
+// Called when data arrives from the app.
+static void on_ble_receive(struct ble_gatt_access_ctxt *ctxt)
+{
+    char buffer[65];
+    size_t length = OS_MBUF_PKTLEN(ctxt->om);
+
+    // Small messages only for this first test.
+    if (length > sizeof(buffer) - 1)
+    {
+        ESP_LOGW("BLE", "Received message too long");
+        return;
+    }
+
+    if (os_mbuf_copydata(ctxt->om, 0, length, buffer) != 0)
+    {
+        return;
+    }
+
+    buffer[length] = '\0';
+
+    ESP_LOGI("BLE", "Received: %s", buffer);
+}
+
+// Sends a short test message once per second.
+static void ble_test_task(void *argument)
+{
+    while (1)
+    {
+        if (atomic_load(&ble_connected))
+        {
+            esp_err_t result =
+                nordic_uart_sendln("Hello from Suzie");
+
+            if (result != ESP_OK)
+            {
+                ESP_LOGW("BLE", "Send failed");
+            }
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+}
+
+TX_payload_obj make_payload(payload_type_t type)
+{
+    TX_payload_obj tx_obj = {0};
+    tx_obj = (TX_payload_obj){
+        .p_comm = (uint16_t)type,
+        .p_ID = payload_count++};
+
+    switch (type)
+    {
+    case 2:
+        tx_obj.rep_obj = (rep_payload_obj){
+            .set_ID = curr_set_obj.set_index,
+            .rep_ID = curr_rep_obj.rep_index,
+            .ROM = curr_rep_obj.ROM,
+            .effort = curr_rep_obj.effort,
+            .rep_duration = (uint16_t)(curr_rep_obj.duration_us / 1000)};
+        break;
+    case 3:
+        tx_obj.set_end_obj = (set_end_payload_obj){
+            .set_ID = curr_set_obj.set_index,
+            .rep_count = curr_set_obj.rep_count,
+            .set_duration = (uint16_t)(curr_set_obj.set_duration_us / 1000)};
+        break;
+    default:
+        break;
+    }
+
+    return tx_obj;
+}
+
+bool queue_payload(payload_type_t type)
+{
+    TX_payload_obj payload = make_payload(type);
+
+    // Try adding normally.
+    if (xQueueSend(tx_queue, &payload, 0) == pdPASS)
+    {
+        return true;
+    }
+
+    // Queue full: discard the oldest payload.
+    TX_payload_obj discarded;
+    xQueueReceive(tx_queue, &discarded, 0);
+
+    // Add the newest payload.
+    return xQueueSend(tx_queue, &payload, 0) == pdPASS;
 }

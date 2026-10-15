@@ -235,9 +235,9 @@ esp_err_t _nordic_uart_start(const char *device_name, void (*callback)(enum nord
   
   // Initialize the NimBLE Host configuration
   // Bluetooth device name for advertisement
-  ble_svc_gap_device_name_set(device_name);
-  ble_svc_gap_init();
-  ble_svc_gatt_init();
+ble_svc_gap_init();
+ble_svc_gatt_init();
+ble_svc_gap_device_name_set(device_name);
 
   ble_gatts_count_cfg(gat_svcs);
   ble_gatts_add_svcs(gat_svcs);
