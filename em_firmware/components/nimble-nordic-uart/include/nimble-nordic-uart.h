@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdint.h>
-
+#include <stddef.h>
 #include <esp_log.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/ringbuf.h>
@@ -50,3 +50,7 @@ bool _nordic_uart_linebuf_initialized();
 esp_err_t _nordic_uart_start(const char *device_name, void (*callback)(enum nordic_uart_callback_type callback_type));
 esp_err_t _nordic_uart_stop(void);
 esp_err_t _nordic_uart_send(const char *message);
+
+esp_err_t nordic_uart_send_bytes(
+    const uint8_t *data,
+    size_t length);

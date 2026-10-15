@@ -9,6 +9,10 @@
 #include "services/gap/ble_svc_gap.h"
 #include "services/gatt/ble_svc_gatt.h"
 #include <freertos/FreeRTOS.h>
+#include <stdbool.h>
+#include <stdatomic.h>
+
+static atomic_bool uart_notifications_enabled = false;
 
 static const char *_TAG = "NORDIC UART";
 
@@ -150,6 +154,7 @@ static int ble_gap_event_cb(struct ble_gap_event *event, void *arg) {
     }
     break;
   case BLE_GAP_EVENT_DISCONNECT:
+    atomic_store(&uart_notifications_enabled, false);
     _nordic_uart_linebuf_append('\003'); // send Ctrl-C
     ESP_LOGI(_TAG, "BLE_GAP_EVENT_DISCONNECT");
     if (_nordic_uart_callback)
@@ -162,6 +167,10 @@ static int ble_gap_event_cb(struct ble_gap_event *event, void *arg) {
     break;
   case BLE_GAP_EVENT_SUBSCRIBE:
     ESP_LOGI(_TAG, "BLE_GAP_EVENT_SUBSCRIBE");
+    if (event->subscribe.attr_handle == notify_char_attr_hdl){
+        atomic_store(
+        &uart_notifications_enabled,
+        event->subscribe.cur_notify != 0);}
     break;
   default:
     break;
@@ -272,4 +281,36 @@ esp_err_t _nordic_uart_stop(void) {
   _nordic_uart_callback = NULL;
   
   return ESP_OK;
+}
+
+esp_err_t nordic_uart_send_bytes(
+    const uint8_t *data,
+    size_t length)
+{
+    // Current packets fit inside a single notification.
+    if (data == NULL || length == 0 || length > 20)
+    {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (!atomic_load(&uart_notifications_enabled))
+    {
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    struct os_mbuf *message =
+        ble_hs_mbuf_from_flat(data, length);
+
+    if (message == NULL)
+    {
+        return ESP_ERR_NO_MEM;
+    }
+
+    // NimBLE owns this buffer after the call, even on failure.
+    int rc = ble_gatts_notify_custom(
+        ble_conn_hdl,
+        notify_char_attr_hdl,
+        message);
+
+    return rc == 0 ? ESP_OK : ESP_FAIL;
 }

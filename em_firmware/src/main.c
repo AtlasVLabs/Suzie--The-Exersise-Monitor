@@ -4,8 +4,11 @@
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/queue.h"
 #include "max30102.h"
 #include "bmi160.h"
+#include <stdint.h>
+#include <stddef.h>
 #include "i2c_bus.h"
 #include "imu_service.h"
 #include "signal_processing.h"
@@ -85,8 +88,8 @@ typedef enum
 
 typedef struct
 {
-    uint16_t p_comm;
     uint16_t p_ID;
+    uint16_t p_comm;
 
     union
     {
@@ -121,11 +124,11 @@ int phase_count = 0;
 int phase_index;
 // Number of sets done per workout
 int set_count;
-// count of sent payloads
-int payload_count;
 // Number of initial sensor samples ignored to allow sensor
 // and filter values to stabilize.
 int startup_samples = 20;
+// count of sent payloads
+uint16_t payload_count;
 // Duration of the completed set, in microseconds.
 int64_t setDuration_us = 0;
 // Time elapsed between consecutive sensor samples, in microseconds.
@@ -175,6 +178,12 @@ static void on_ble_receive(struct ble_gatt_access_ctxt *ctxt);
 
 static void ble_test_task(void *argument);
 
+static void write_u16_le(uint8_t *out, uint16_t value);
+
+static void write_u32_le(uint8_t *out, uint32_t value);
+
+static size_t encode_payload(const TX_payload_obj *payload, uint8_t out[12]);
+
 TX_payload_obj make_payload(payload_type_t type);
 
 bool queue_payload(payload_type_t type);
@@ -182,6 +191,9 @@ bool queue_payload(payload_type_t type);
 void app_main()
 {
     // inits-------------------------------------------------
+    tx_queue = xQueueCreate(TX_QUEUE_LENGTH, sizeof(TX_payload_obj));
+    configASSERT(tx_queue != NULL);
+
     ESP_ERROR_CHECK(nordic_uart_yield(on_ble_receive));
     ESP_ERROR_CHECK(nordic_uart_start("Suzie", on_ble_connection));
 
@@ -204,9 +216,6 @@ void app_main()
         .apm = bmi160_accel_pwr_normal,
         .gpm = bmi160_gyro_pwr_normal};
     BMI160_config(&bmiconfig);
-
-    tx_queue = xQueueCreate(TX_QUEUE_LENGTH, sizeof(TX_payload_obj));
-    configASSERT(tx_queue != NULL);
 
     fflush(stdout);
 
@@ -279,9 +288,11 @@ void app_main()
             // start of set
             if (!set_active)
             {
+
                 set_active = true;
                 set_start_time = esp_timer_get_time();
                 phase_count = 0;
+                curr_set_obj.set_index = set_count;
                 curr_set_obj.rep_count = 0;
 
                 queue_payload(PAYLOAD_SET_STARTED);
@@ -399,8 +410,6 @@ void end_of_set_event()
 
 void update_set_metrics(set_obj *set, rep_obj *rep)
 {
-    set->set_index = set_count;
-
     // update the avg metrics
     set->avg_ROM +=
         (rep->ROM - set->avg_ROM) /
@@ -486,23 +495,56 @@ static void on_ble_receive(struct ble_gatt_access_ctxt *ctxt)
     ESP_LOGI("BLE", "Received: %s", buffer);
 }
 
-// Sends a short test message once per second.
 static void ble_test_task(void *argument)
 {
+    TX_payload_obj pending;
+    bool have_pending = false;
+    uint8_t bytes[12];
+
     while (1)
     {
         if (atomic_load(&ble_connected))
         {
-            esp_err_t result =
-                nordic_uart_sendln("Hello from Suzie");
-
-            if (result != ESP_OK)
+            // Retrieve a new item only when none is waiting to send.
+            if (!have_pending)
             {
-                ESP_LOGW("BLE", "Send failed");
+                have_pending =
+                    xQueueReceive(tx_queue, &pending, 0) == pdPASS;
+            }
+
+            if (have_pending)
+            {
+                size_t length = encode_payload(&pending, bytes);
+
+                if (length == 0)
+                {
+                    ESP_LOGW("TX", "Unknown type: 0x%04X",
+                             (unsigned)pending.p_comm);
+
+                    have_pending = false;
+                }
+                else
+                {
+                    esp_err_t result =
+                        nordic_uart_send_bytes(bytes, length);
+
+                    if (result == ESP_OK)
+                    {
+                        ESP_LOGI("TX", "Packet %u accepted, %u bytes",
+                                 (unsigned)pending.p_ID,
+                                 (unsigned)length);
+
+                        ESP_LOG_BUFFER_HEX("TX", bytes, length);
+
+                        have_pending = false;
+                    }
+
+                    // If sending fails, keep this item and retry.
+                }
             }
         }
 
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
 
@@ -515,19 +557,19 @@ TX_payload_obj make_payload(payload_type_t type)
 
     switch (type)
     {
-    case 2:
+    case PAYLOAD_REP_COMPLETED:
         tx_obj.rep_obj = (rep_payload_obj){
             .set_ID = curr_set_obj.set_index,
             .rep_ID = curr_rep_obj.rep_index,
-            .ROM = curr_rep_obj.ROM,
-            .effort = curr_rep_obj.effort,
+            .ROM = (uint16_t)(curr_rep_obj.ROM * 1000.0f),
+            .effort = (uint16_t)(curr_rep_obj.effort * 1000.0f),
             .rep_duration = (uint16_t)(curr_rep_obj.duration_us / 1000)};
         break;
-    case 3:
+    case PAYLOAD_SET_ENDED:
         tx_obj.set_end_obj = (set_end_payload_obj){
             .set_ID = curr_set_obj.set_index,
             .rep_count = curr_set_obj.rep_count,
-            .set_duration = (uint16_t)(curr_set_obj.set_duration_us / 1000)};
+            .set_duration = (uint32_t)(curr_set_obj.set_duration_us / 1000)};
         break;
     default:
         break;
@@ -552,4 +594,55 @@ bool queue_payload(payload_type_t type)
 
     // Add the newest payload.
     return xQueueSend(tx_queue, &payload, 0) == pdPASS;
+}
+
+static void write_u16_le(uint8_t *out, uint16_t value)
+{
+    out[0] = (uint8_t)value;
+    out[1] = (uint8_t)(value >> 8);
+}
+
+static void write_u32_le(uint8_t *out, uint32_t value)
+{
+    out[0] = (uint8_t)value;
+    out[1] = (uint8_t)(value >> 8);
+    out[2] = (uint8_t)(value >> 16);
+    out[3] = (uint8_t)(value >> 24);
+}
+
+// out must have room for at least 12 bytes.
+// Returns the encoded length, or 0 for an unsupported type.
+static size_t encode_payload(
+    const TX_payload_obj *payload,
+    uint8_t out[12])
+{
+    write_u16_le(&out[0], payload->p_ID);
+    write_u16_le(&out[2], payload->p_comm);
+
+    switch (payload->p_comm)
+    {
+    case PAYLOAD_SET_STARTED:
+        return 4; // Header only
+
+    case PAYLOAD_REP_COMPLETED:
+        out[4] = payload->rep_obj.set_ID;
+        out[5] = payload->rep_obj.rep_ID;
+
+        write_u16_le(&out[6], payload->rep_obj.ROM);
+        write_u16_le(&out[8], payload->rep_obj.effort);
+        write_u16_le(&out[10], payload->rep_obj.rep_duration);
+
+        return 12;
+
+    case PAYLOAD_SET_ENDED:
+        out[4] = payload->set_end_obj.set_ID;
+        out[5] = payload->set_end_obj.rep_count;
+
+        write_u32_le(&out[6], payload->set_end_obj.set_duration);
+
+        return 10;
+
+    default:
+        return 0;
+    }
 }
