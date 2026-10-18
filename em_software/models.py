@@ -16,3 +16,9 @@ class Set:
     set_id: int
     rep_count: int
     set_duration: float
+
+# Shared objects that the decoder updates and the display reads.
+current_rep = Rep(0, 0, 0.0, 0.0, 0)
+current_set = Set(0, 0, 0.0)
+
+display_status = {"set": "Waiting"}

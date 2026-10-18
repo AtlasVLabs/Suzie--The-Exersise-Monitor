@@ -1,10 +1,10 @@
 """BLE discovery, connection, and notification subscription."""
 
 import asyncio
-
 from bleak import BleakClient, BleakScanner
-
 from packets import handle_packet
+from rich.live import Live
+from dashboard import make_dashboard
 
 DEVICE_NAME = "Suzie"
 TX_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e"
@@ -27,7 +27,13 @@ async def run_connection() -> None:
         print("Connected. Press Ctrl+C to disconnect.")
         await client.start_notify(TX_UUID, on_receive)
 
-        while client.is_connected:
-            await asyncio.sleep(0.5)
+        with Live(
+                make_dashboard(),
+                refresh_per_second=5,
+                screen=True
+        ) as live:
+            while client.is_connected:
+                live.update(make_dashboard())
+                await asyncio.sleep(0.2)
 
     print("Disconnected.")

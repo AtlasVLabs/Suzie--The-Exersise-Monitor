@@ -2,7 +2,7 @@
 
 import struct
 
-from models import Rep, Set
+from models import Rep, current_rep, current_set, display_status
 
 PAYLOAD_SET_STARTED = 0xA001
 PAYLOAD_REP_COMPLETED = 0xB001
@@ -40,35 +40,29 @@ def handle_packet(data: bytes | bytearray) -> None:
 
     match command:
         case 0xA001:
-            print("Set started")
+            display_status["set"] = "Active"
+            current_set.rep_count = 0
+            current_set.set_duration = 0.0
 
         case 0xB001:
             set_id, rep_id, rom, effort, duration_ms = struct.unpack_from(
                 "<BBHHH", data, 4
             )
-            rep = Rep(
-                set_id=set_id,
-                rep_id=rep_id,
-                ROM=rom / ROM_SCALE,
-                effort=effort / EFFORT_SCALE,
-                duration_ms=duration_ms,
-            )
 
-            print("Rep Completed---------------")
-            print(f"Rep ID: {rep.rep_id}")
-            print(f"Rep ROM: {rep.ROM}")
-            print(f"Rep Effort: {rep.effort}")
-            print(f"Rep Duration: {rep.duration_ms}\n----------------------------")
+            current_rep.set_id = set_id
+            current_rep.rep_id = rep_id
+            current_rep.ROM = rom / ROM_SCALE
+            current_rep.effort = effort
+            current_rep.duration_ms = duration_ms
+
+            current_set.set_id = set_id
+            current_set.rep_count = rep_id
+            display_status["set"] = "Active"
 
         case 0xC001:
             set_id, rep_count, set_duration = struct.unpack_from("<BBI", data, 4)
 
-            set = Set(
-                set_id = set_id,
-                rep_count = rep_count,
-                set_duration = set_duration/SET_DURATION_SCALE,
-            )
-            print("Set ended")
-            print(f"Set ID: {set.set_id}")
-            print(f"Rep Count: {set.rep_count}")
-            print(f"Set Duration: {set.set_duration}")
+            current_set.set_id = set_id
+            current_set.rep_count = rep_count
+            current_set.set_duration = set_duration / 1000.0
+            display_status["set"] = "Complete / resting"
