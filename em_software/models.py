@@ -22,3 +22,7 @@ current_rep = Rep(0, 0, 0.0, 0.0, 0)
 current_set = Set(0, 0, 0.0)
 
 display_status = {"set": "Waiting"}
+
+rom_samples = []
+effort_samples = []
+duration_samples = []

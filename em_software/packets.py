@@ -3,6 +3,7 @@
 import struct
 
 from models import Rep, current_rep, current_set, display_status
+from models import rom_samples, effort_samples, duration_samples
 
 PAYLOAD_SET_STARTED = 0xA001
 PAYLOAD_REP_COMPLETED = 0xB001
@@ -44,6 +45,10 @@ def handle_packet(data: bytes | bytearray) -> None:
             current_set.rep_count = 0
             current_set.set_duration = 0.0
 
+            rom_samples.clear()
+            effort_samples.clear()
+            duration_samples.clear()
+
         case 0xB001:
             set_id, rep_id, rom, effort, duration_ms = struct.unpack_from(
                 "<BBHHH", data, 4
@@ -58,6 +63,15 @@ def handle_packet(data: bytes | bytearray) -> None:
             current_set.set_id = set_id
             current_set.rep_count = rep_id
             display_status["set"] = "Active"
+
+            rom_samples.append(current_rep.ROM)
+            effort_samples.append(current_rep.effort)
+            duration_samples.append(current_rep.duration_ms / 1000.0)
+
+            # Keep the most recent 20 samples.
+            del rom_samples[:-20]
+            del effort_samples[:-20]
+            del duration_samples[:-20]
 
         case 0xC001:
             set_id, rep_count, set_duration = struct.unpack_from("<BBI", data, 4)

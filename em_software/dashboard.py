@@ -3,7 +3,8 @@ from rich.console import Group
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
-
+from graphs import block_graph
+from models import rom_samples, effort_samples, duration_samples
 from models import current_rep, current_set, display_status
 
 
@@ -36,9 +37,24 @@ def make_dashboard():
         graphs.add_column(ratio=1)
 
     graphs.add_row(
-        Panel("", title="ROM", height=6, box=box.SQUARE),
-        Panel("", title="Effort", height=6, box=box.SQUARE),
-        Panel("", title="Duration", height=6, box=box.SQUARE),
+        Panel(
+            block_graph(rom_samples),
+            title="ROM",
+            height=6,
+            box=box.SQUARE
+        ),
+        Panel(
+            block_graph(effort_samples),
+            title="Effort",
+            height=6,
+            box=box.SQUARE
+        ),
+        Panel(
+            block_graph(duration_samples),
+            title="Duration",
+            height=6,
+            box=box.SQUARE
+        ),
     )
 
     rep_content = Group(
