@@ -7,9 +7,22 @@ from graphs import block_graph
 from models import rom_samples, effort_samples, duration_samples
 from models import current_rep, current_set, display_status
 from config import GRAPH_WIDTH, GRAPH_HEIGHT, BAR_WIDTH
+from rich.console import Console
+
 
 
 def make_dashboard():
+    # Three equal graph columns.
+    terminal_width = Console().width
+    panel_width = terminal_width // 3
+
+    # Allow space for the outer panel, column spacing,
+    # graph borders/padding, and nine Y-axis label columns.
+    drawing_width = max(1, panel_width - 17)
+
+    visible_samples = max(1, drawing_width // BAR_WIDTH)
+    graph_width = visible_samples * BAR_WIDTH
+
     # Header
     header = Table.grid(expand=True)
     header.add_column(ratio=1)
@@ -40,7 +53,7 @@ def make_dashboard():
     graphs.add_row(
         Panel(
             block_graph(rom_samples,
-                        width=GRAPH_WIDTH,
+                        width=graph_width,
                         height=GRAPH_HEIGHT,
                         bar_width=BAR_WIDTH),
             title="ROM",
@@ -49,7 +62,7 @@ def make_dashboard():
         ),
         Panel(
             block_graph(effort_samples,
-                        width=GRAPH_WIDTH,
+                        width=graph_width,
                         height=GRAPH_HEIGHT,
                         bar_width=BAR_WIDTH),
             title="Effort",
@@ -58,7 +71,7 @@ def make_dashboard():
         ),
         Panel(
             block_graph(duration_samples,
-                        width=GRAPH_WIDTH,
+                        width=graph_width,
                         height=GRAPH_HEIGHT,
                          bar_width=BAR_WIDTH),
             title="Duration",

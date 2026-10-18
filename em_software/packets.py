@@ -19,7 +19,6 @@ PACKET_LENGTHS = {
     PAYLOAD_SET_ENDED: 10,
 }
 
-
 def handle_packet(data: bytes | bytearray) -> None:
     if len(data) < 4:
         print("Packet is too small")
