@@ -6,6 +6,7 @@ from rich.text import Text
 from graphs import block_graph
 from models import rom_samples, effort_samples, duration_samples
 from models import current_rep, current_set, display_status
+from config import GRAPH_WIDTH, GRAPH_HEIGHT, BAR_WIDTH
 
 
 def make_dashboard():
@@ -38,19 +39,28 @@ def make_dashboard():
 
     graphs.add_row(
         Panel(
-            block_graph(rom_samples),
+            block_graph(rom_samples,
+                        width=GRAPH_WIDTH,
+                        height=GRAPH_HEIGHT,
+                        bar_width=BAR_WIDTH),
             title="ROM",
             height=6,
             box=box.SQUARE
         ),
         Panel(
-            block_graph(effort_samples),
+            block_graph(effort_samples,
+                        width=GRAPH_WIDTH,
+                        height=GRAPH_HEIGHT,
+                        bar_width=BAR_WIDTH),
             title="Effort",
             height=6,
             box=box.SQUARE
         ),
         Panel(
-            block_graph(duration_samples),
+            block_graph(duration_samples,
+                        width=GRAPH_WIDTH,
+                        height=GRAPH_HEIGHT,
+                         bar_width=BAR_WIDTH),
             title="Duration",
             height=6,
             box=box.SQUARE

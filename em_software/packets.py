@@ -1,7 +1,7 @@
 """Decode Suzie's binary notifications and print their contents."""
 
 import struct
-
+from config import SAMPLE_COUNT
 from models import Rep, current_rep, current_set, display_status
 from models import rom_samples, effort_samples, duration_samples
 
@@ -69,9 +69,9 @@ def handle_packet(data: bytes | bytearray) -> None:
             duration_samples.append(current_rep.duration_ms / 1000.0)
 
             # Keep the most recent 20 samples.
-            del rom_samples[:-20]
-            del effort_samples[:-20]
-            del duration_samples[:-20]
+            del rom_samples[:-SAMPLE_COUNT]
+            del effort_samples[:-SAMPLE_COUNT]
+            del duration_samples[:-SAMPLE_COUNT]
 
         case 0xC001:
             set_id, rep_count, set_duration = struct.unpack_from("<BBI", data, 4)
