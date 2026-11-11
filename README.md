@@ -1,6 +1,6 @@
 # Suzie
 
-A wearable workout-monitoring prototype built with an ESP32 and ESP-IDF. Suzie processes sensor data to detect repetitions and track movement throughout a set.
+A wearable workout-monitoring prototype built with an ESP32 and ESP-IDF. Suzie processes sensor data to detect repetitions and track movement throughout a set, with the end goal of visualizing progress in a more quantitative and easy to understand manner.
 
 ## Current Features
 
